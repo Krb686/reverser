@@ -31,33 +31,33 @@ typedef int64_t  ELF64_SXWORD;
 struct ELF64_EHDR {
 
     unsigned char e_ident[16];
-    ELF64_HALF    e_type;
-    ELF64_HALF    e_machine;
-    ELF64_WORD    e_version;
-    ELF64_ADDR    e_entry;
-    ELF64_OFF     e_phoff;
-    ELF64_OFF     e_shoff;
-    ELF64_WORD    e_flags;
-    ELF64_HALF    e_ehsize;
-    ELF64_HALF    e_phentsize;
-    ELF64_HALF    e_phnum;
-    ELF64_HALF    e_shentsize;
-    ELF64_HALF    e_shnum;
-    ELF64_HALF    e_shstrndx;
+    unsigned char e_type[2];
+    unsigned char e_machine[2];
+    unsigned char e_version[4];
+    unsigned char e_entry[8];
+    unsigned char e_phoff[8];
+    unsigned char e_shoff[8];
+    unsigned char e_flags[4];
+    unsigned char e_ehsize[2];
+    unsigned char e_phentsize[2];
+    unsigned char e_phnum[2];
+    unsigned char e_shentsize[2];
+    unsigned char e_shnum[2];
+    unsigned char e_shstrndx[2];
 
 };
 
 /* Program Header */
 struct ELF64_PHDR {
 
-    ELF64_WORD  p_type;
-    ELF64_OFF   p_offset;
-    ELF64_ADDR  p_vaddr;
-    ELF64_ADDR  p_paddr;
-    ELF64_WORD  p_filesz;
-    ELF64_WORD  p_memsz;
-    ELF64_WORD  p_flags;
-    ELF64_WORD  p_align;
+    ELF64_WORD  p_type;    // 4 bytes
+    ELF64_OFF   p_offset;  // 8 bytes
+    ELF64_ADDR  p_vaddr;   // 8 bytes
+    ELF64_ADDR  p_paddr;   // 8 bytes
+    ELF64_WORD  p_filesz;  // 4 bytes
+    ELF64_WORD  p_memsz;   // 4 bytes
+    ELF64_WORD  p_flags;   // 4 bytes
+    ELF64_WORD  p_align;   // 4 bytes
 
 };
 
@@ -103,15 +103,15 @@ char* uint16_to_char(uint16_t val){
     return rptr;
 }
 
-/*
-char* uint32_to_char(uint32_t val){
+void print_field(char *prefix, unsigned char *field, int arraysz){
+    printf("%s", prefix);
 
+    int i;
+    for (i=0;i<arraysz;++i){
+        printf("%02x ", field[i]);
+    }
+    printf("\n");
 }
-
-char* uint64_to_char(uint64_t val){
-
-}
-*/
 
 /* ================ Function: print_usage ================ */
 /*                                                         */
@@ -124,79 +124,117 @@ void print_usage(){
 /* ================ Function: decode_file ================ */
 /*                                                         */
 /* ======================================================= */
-void read_elf_header(FILE *p_file, struct ELF64_EHDR *p_elf_hdr){
-    printf("%s\n", "Decoding the file...");    
+void read_elf_header(FILE *p_file, struct ELF64_EHDR *p_ehdr){
 
-    /* e_ident */
-    int bytes_read, i;
-    bytes_read = fread(&(p_elf_hdr->e_ident), 1, sizeof(p_elf_hdr->e_ident), p_file);
+    /* e_ident - 16 bytes */
+    int bytes_read;
+    bytes_read = fread(&(p_ehdr->e_ident), 1, 16, p_file);
     if(bytes_read != 16){
         fprintf(stderr, "Error reading e_ident!");
         exit(-1);
     }
-    printf("e_ident = ");
-    for (i = 0; i < sizeof(p_elf_hdr->e_ident); ++i){
-        printf("%02x ", p_elf_hdr->e_ident[i]);
-    }
-    printf("\n");
+    print_field("e_ident = ", p_ehdr->e_ident, 16);
 
     /* e_type - 2 bytes*/
-    bytes_read = fread(&p_elf_hdr->e_type, 1, sizeof(p_elf_hdr->e_type), p_file);
+    bytes_read = fread(&p_ehdr->e_type, 1, 2, p_file);
+    reverse(p_ehdr->e_type);
     if(bytes_read != 2){
-        fprintf(stderr, "Error reading e_type! Read %d bytes instead of 4!\n", bytes_read);
+        fprintf(stderr, "Error reading e_type! Read %d bytes instead of 2!\n", bytes_read);
         exit(-1);
     }
-    //char *ptr1 = uint16_to_char(p_elf_hdr->e_type);
-    printf("e_type = %04x\n", p_elf_hdr->e_type);
+    print_field("e_type = ", p_ehdr->e_type, 2);
+
 
     /* e_machine - 2 bytes*/
-    fread(&p_elf_hdr->e_machine, 1, sizeof(p_elf_hdr->e_machine), p_file);
-    printf("e_machine = %04x\n", p_elf_hdr->e_machine);
+    bytes_read = fread(&p_ehdr->e_machine, 1, 2, p_file);
+    if (bytes_read != 2){
+        fprintf(stderr, "Error reading e_machine! Read %d bytes instead of 2!\n", bytes_read);
+        exit(-1);
+    }
+    print_field("e_machine = ", p_ehdr->e_machine, 2);
+
 
     /* e_version - 4 bytes*/
-    fread(&p_elf_hdr->e_version, 1, sizeof(p_elf_hdr->e_version), p_file);
-    printf("e_version = %08x\n", p_elf_hdr->e_version);
+    bytes_read = fread(&p_ehdr->e_version, 1, 4, p_file);
+    if (bytes_read != 4){
+        fprintf(stderr, "Error reading e_version! Read %d bytes instead of 4!\n", bytes_read);
+        exit(-1);
+    }
+    print_field("e_version = ", p_ehdr->e_version, 4);
+
 
     /* e_entry - 8 bytes*/
-    fread(&p_elf_hdr->e_entry, 1, sizeof(p_elf_hdr->e_entry), p_file);
-    //char *p1 = uint64_to_char(p_elf_hdr->e_entry);
-    printf("e_entry = %" PRIx64 "\n", p_elf_hdr->e_entry);
+    bytes_read = fread(&p_ehdr->e_entry, 1, 8, p_file);
+    if (bytes_read != 8){
+        fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_entry = ", p_ehdr->e_entry, 8);
+
 
     /* e_phoff - 8 bytes */
-    fread(&p_elf_hdr->e_phoff, 1, sizeof(p_elf_hdr->e_phoff), p_file);
-    printf("e_phoff = %" PRIx64 "\n", p_elf_hdr->e_phoff);
+    bytes_read = fread(&p_ehdr->e_phoff, 1, 8, p_file);
+    if (bytes_read != 8){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_phoff = ", p_ehdr->e_phoff, 8);
+
 
     /* e_shoff - 8 bytes */
-    fread(&p_elf_hdr->e_shoff, 1, sizeof(p_elf_hdr->e_shoff), p_file);
-    printf("e_shoff = %" PRIx64 "\n", p_elf_hdr->e_shoff);
+    bytes_read = fread(&p_ehdr->e_shoff, 1, 8, p_file);
+    if (bytes_read != 8){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_shoff = ", p_ehdr->e_shoff, 8);
 
     /* e_flags - 4 bytes */
-    fread(&p_elf_hdr->e_flags, 1, sizeof(p_elf_hdr->e_flags), p_file);
-    printf("e_flags = %08x\n", p_elf_hdr->e_flags);
+    bytes_read = fread(&p_ehdr->e_flags, 1, 4, p_file);
+    if (bytes_read != 4){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_flags = ", p_ehdr->e_flags, 4);
 
-    /* e_ehsize */
-    fread(&p_elf_hdr->e_ehsize, 1, sizeof(p_elf_hdr->e_ehsize), p_file);
-    printf("e_ehsize = %04x\n", p_elf_hdr->e_ehsize);
 
-    /* e_phentsize */
-    fread(&p_elf_hdr->e_phentsize, 1, sizeof(p_elf_hdr->e_phentsize), p_file);
-    printf("e_phentsize = %04x\n", p_elf_hdr->e_phentsize);
+    /* e_ehsize - 4 bytes */
+    bytes_read = fread(&p_ehdr->e_ehsize, 1, 4, p_file);
+    if (bytes_read != 4){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_ehsize = ", p_ehdr->e_ehsize, 4);
 
-    /* e_phnum */
-    fread(&p_elf_hdr->e_phnum, 1, sizeof(p_elf_hdr->e_phnum), p_file);
-    printf("e_phnum = %04x\n", p_elf_hdr->e_phnum);
+
+    /* e_phentsize - 4 bytes */
+    bytes_read = fread(&p_ehdr->e_phentsize, 1, 4, p_file);
+    if (bytes_read != 4){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_phentsize = ", p_ehdr->e_phentsize, 4);
+
+
+    /* e_phnum - 4 bytes */
+    bytes_read = fread(&p_ehdr->e_phnum, 1, 4, p_file);
+    if (bytes_read != 4){
+       fprintf(stderr, "Error!");
+        exit(-1);
+    }
+    print_field("e_phnum = ", p_ehdr->e_phnum, 4);
+
 
     /* e_shentsize */
-    fread(&p_elf_hdr->e_shentsize, 1, sizeof(p_elf_hdr->e_shentsize), p_file);
-    printf("e_shentsize = %04x\n", p_elf_hdr->e_shentsize);
+    bytes_read = fread(&p_ehdr->e_shentsize, 1, sizeof(p_ehdr->e_shentsize), p_file);
+
 
     /* e_shnum */
-    fread(&p_elf_hdr->e_shnum, 1, sizeof(p_elf_hdr->e_shnum), p_file);
-    printf("e_shnum = %04x\n", p_elf_hdr->e_shnum);
+    bytes_read = fread(&p_ehdr->e_shnum, 1, sizeof(p_ehdr->e_shnum), p_file);
+
 
     /* e_shstrndx */
-    fread(&p_elf_hdr->e_shstrndx, 1, sizeof(p_elf_hdr->e_shstrndx), p_file);
-    printf("e_shstrndx = %04x\n", p_elf_hdr->e_shstrndx);
+    bytes_read = fread(&p_ehdr->e_shstrndx, 1, sizeof(p_ehdr->e_shstrndx), p_file);
 
 }
 
@@ -282,19 +320,20 @@ int main( int argc, char **argv){
     }
 
 
-    struct ELF64_EHDR elf_hdr, *p_elf_hdr;
-    p_elf_hdr = &elf_hdr;
+    struct ELF64_EHDR elf_hdr, *p_ehdr;
+    p_ehdr = &elf_hdr;
 
 
     /*Decode bytes from the file */
-    read_elf_header(p_file, p_elf_hdr);
+    printf("\nRead the elf header...\n");
+    read_elf_header(p_file, p_ehdr);
 
-    if(p_elf_hdr->e_type == 2) {
+    if(p_ehdr->e_type == 2) {
 
         struct ELF64_PHDR phdr, *p_phdr;
         p_phdr = &phdr;
 
-        printf("Read the program header...\n");
+        printf("\nRead the program header...\n");
         read_program_header(p_file, p_phdr);
     } 
 
