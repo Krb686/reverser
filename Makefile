@@ -1,25 +1,30 @@
-REVERSER=reverser
+CC=gcc
+CFLAGS=-g -Wall
+LDFLAGS=
 
-C=gcc
-CFLAGS= -Wall
+SRCDIR=src
+OBJDIR=obj
+BINDIR=bin
 
-OBJDIR=./obj
-SRCDIR=./src
-BINDIR=./bin
-
-
-
-SRCS=$(shell find $(SRCDIR) -maxdepth 1 -type f -name "*.c")
+# Collect all sources in SRCDIR
+SRCS=$(wildcard $(SRCDIR)/*.c)
+# Translate to object names in OBJDIR
 OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
+BINS=$(patsubst $(OBJDIR)/%.o, $(BINDIR)/$(basename %.o), $(OBJS))
 
 
-all: $(REVERSER)
+# Build all binaries
+all: $(BINS)
 
-$(REVERSER): $(OBJS)
-	$(C) $(CFLAGS) $^ -o $(BINDIR)/$(REVERSER)
+$(BINS): $(BINDIR)/% : $(OBJDIR)/%.o
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-$(OBJDIR)/%.o : $(SRCDIR)/%.c
-	$(C) $(CFLAGS) -c $< -o $@
+$(OBJS): $(OBJDIR)/%.o : $(SRCDIR)/%.c PRINT
+	$(CC) $(CFLAGS) $(LDFLAGS) -c $< -o $@
+
+.PHONY: PRINT
+PRINT:
+	@printf "Making objects\n"
 
 
 .PHONY: clean

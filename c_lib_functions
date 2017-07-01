@@ -1,0 +1,34 @@
+c library
+
+	<assert.h>
+		void assert(int expression);
+	<ctype.h>
+		int isalnum(int character);
+		int isalpha(int character);
+		int iscntrl(int character);
+		int isdigit(int character);
+		int islower
+		int isprint
+		int ispunct
+		int isspace
+		int isupper
+		int isxdigit
+		int tolower
+		int toupper
+	<errno.h>
+	<float.h>
+	<limits.h>
+	<locale.h>
+	<math.h>
+	<setjmp.h>
+	<signal.h>
+	<stdarg.h>
+	<stddef.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+		strcpy
+		strdup
+	<time.h>
+
+
