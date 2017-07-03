@@ -34,6 +34,8 @@ const char *EI_OSABI_TYPES[16] = { "System V ABI", "HP-UX", "NetBSD", "Linux", "
 const char *SEGMENT_TYPES[8] = { "PT_NULL", "PT_LOAD", "PT_DYNAMIC", "PT_INTERP", "PT_NOTE", "PT_SHLIB", "PT_PHDR", "" };
 const char *SEGMENT_FLAG_TYPES[8] = { "---", "--X", "-W-", "-WX", "R--", "R-X", "RW-", "RWX" };
 
+Elf64_Ehdr *ehdr;
+
 // Begin
 int main(int argc, char* argv[]){
 
@@ -41,8 +43,8 @@ int main(int argc, char* argv[]){
     int opt_index;
     char *filename;
     struct stat fstatbuf;
-    Elf64_Ehdr *ehdr;
     Elf64_Phdr *phdr_array;
+    Elf64_Shdr *shdr_array;
 
     // Handle arguments
     if(argc == 1){
@@ -70,9 +72,14 @@ int main(int argc, char* argv[]){
     dump_ehdr(ehdr);
 
 
-    // Locate the program header table
+    // Locate and dump the program header table
     phdr_array = (char*)ehdr + ehdr->e_phoff;
     dump_phdr(phdr_array, ehdr->e_phnum);
+
+    // Locate and dump the section header table
+    shdr_array = (char*)ehdr + ehdr->e_shoff;
+    printf("shdr_array = 0x%" PRIx64 "\n", shdr_array);
+    dump_shdr(shdr_array, ehdr->e_shnum);
     return 0;
 }
 
@@ -128,6 +135,34 @@ void dump_phdr(Elf64_Phdr *phdr, int num_entries){
         printf("\t\tp_align = 0x%" PRIx64 "\n", phdr->p_align);
         phdr++;
     }
+}
+
+void dump_shdr(Elf64_Shdr *shdr, int num_entries){
+    printf("======== SECTION HEADER TABLE ========\n");
+
+    // Get the string table entry
+    // It is the section header table's address + (e_shstrndx * size of an entry)
+    Elf64_Shdr *sh_strentry = ((char*)shdr + (ehdr->e_shstrndx * sizeof(Elf64_Shdr)));
+    printf("\t\tsh_strentry = 0x%" PRIx64 "\n", sh_strentry);
+
+    // Get the strtab address
+    char *strtab = (char*)ehdr + sh_strentry->sh_offset;
+    printf("\t\tstrtab = 0x%" PRIx64 "\n", strtab);
+
+    int i;
+    for(i=0;i<num_entries;i++){
+        printf("\tSection #%d\n", i);
+        printf("\t\tshdr located at - 0x%" PRIx64 "\n", shdr);
+        char *str_section = strtab + shdr->sh_name;
+        printf("\t\tsh_name(index) = 0x%" PRIu32 " = %s" "\n", shdr->sh_name, str_section );
+        printf("\t\tsh_type = 0x%" PRIx32 "\n", shdr->sh_type);
+        printf("\t\tsh_flags = 0x%" PRIx32 "\n", shdr->sh_flags);
+        printf("\t\tsh_addr = 0x%" PRIx64 "\n", shdr->sh_addr);
+        printf("\t\tsh_offset = 0x%" PRIx64 "\n", shdr->sh_offset);
+        shdr++;
+    }
+
+
 }
 
 void usage(){
