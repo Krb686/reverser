@@ -31,6 +31,8 @@ struct option long_opts[] = {
 const char *EI_CLASS_TYPES[3] = { "", "32-bit", "64-bit" };
 const char *EI_DATA_TYPES[3]  = { "", "LSB", "MSB" };
 const char *EI_OSABI_TYPES[16] = { "System V ABI", "HP-UX", "NetBSD", "Linux", "", "", "Solaris", "AIX", "IRIX", "FreeBSD", "", "", "OpenBSD", "OpenVMS", "NonStop Kernel", "AROS" };
+const char *SEGMENT_TYPES[8] = { "PT_NULL", "PT_LOAD", "PT_DYNAMIC", "PT_INTERP", "PT_NOTE", "PT_SHLIB", "PT_PHDR", "" };
+const char *SEGMENT_FLAG_TYPES[8] = { "---", "--X", "-W-", "-WX", "R--", "R-X", "RW-", "RWX" };
 
 // Begin
 int main(int argc, char* argv[]){
@@ -64,11 +66,9 @@ int main(int argc, char* argv[]){
     off_t filesize;
     filesize = lseek(fd, 0, SEEK_END);
     ehdr = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, fd, 0); 
-    printf("ehdr = 0x%" PRIx64 "\n", ehdr);
 
     dump_ehdr(ehdr);
 
-    printf("e_phoff val = %" PRId64 "\n", ehdr->e_phoff);
 
     // Locate the program header table
     phdr_array = (char*)ehdr + ehdr->e_phoff;
@@ -104,8 +104,22 @@ void dump_phdr(Elf64_Phdr *phdr, int num_entries){
     int i;
     for(i=0;i<num_entries;i++){
         printf("\tEntry #%d\n", i+1);
-        printf("\t\tp_type = 0x%" PRIx32 "\n", phdr->p_type);
-        printf("\t\tp_flags = 0x%" PRIx32 "\n", phdr->p_flags);
+
+        char *segtype;
+        if(phdr->p_type < 7){
+            segtype = SEGMENT_TYPES[phdr->p_type];
+        } else {
+            segtype = "SPECIAL";
+        }
+        printf("\t\tp_type = 0x%" PRIx32 " = %s" "\n", phdr->p_type, segtype);
+
+        char *pflagtype;
+        if(phdr->p_flags < 8){
+            pflagtype = SEGMENT_FLAG_TYPES[phdr->p_flags];
+        } else {
+            pflagtype = "???";
+        }
+        printf("\t\tp_flags = 0x%" PRIx32 " = %s" "\n", phdr->p_flags, pflagtype);
         printf("\t\tp_offset = 0x%" PRIx64 "\n", phdr->p_offset);
         printf("\t\tp_vaddr = 0x%" PRIx64 "\n", phdr->p_vaddr);
         printf("\t\tp_paddr = 0x%" PRIx64 "\n", phdr->p_vaddr);
