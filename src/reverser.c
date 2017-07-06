@@ -26,7 +26,8 @@
 void usage();
 void dump_ehdr(Elf64_Ehdr*);
 void dump_phdr(Elf64_Phdr*, int );
-void dump_shdr(Elf64_Shdr*, int );
+void create_sections(Elf64_Shdr*, int);
+void dump_sections(int);
 
 
 // Getopt variables
@@ -44,13 +45,28 @@ const char *EI_OSABI_TYPES[16] = { "System V ABI", "HP-UX", "NetBSD", "Linux", "
 const char *SEGMENT_TYPES[8] = { "PT_NULL", "PT_LOAD", "PT_DYNAMIC", "PT_INTERP", "PT_NOTE", "PT_SHLIB", "PT_PHDR", "" };
 const char *SEGMENT_FLAG_TYPES[8] = { "---", "--X", "-W-", "-WX", "R--", "R-X", "RW-", "RWX" };
 const char *SECTION_TYPES[12] = { "SHT_NULL", "SHT_PROGBITS", "SHT_SYMTAB", "SHT_STRTAB", "SHT_RELA", "SHT_HASH", "SHT_DYNAMIC", "SHT_NOTE", "SHT_NOBITS", "SHT_REL", "SHT_SHLIB", "SHT_DYNSYM" };
-const char *SECTION_FLAG_TYPES[8] = { "", "write", "alloc", "alloc+write", "exec", "exec+write", "exec+alloc", "exec+alloc+write" };
+const char *SECTION_FLAG_TYPES[8] = { "---", "write", "alloc", "alloc+write", "exec", "exec+write", "exec+alloc", "exec+alloc+write" };
 
 Elf64_Ehdr *ehdr;
 
 struct section {
-    char* name;
+    uint8_t  num;
+    char     *name;
+    uint8_t  type;
+    char     *type_str;
+    uint8_t  flags;
+    char     *flags_str;
+    uint64_t addr;
+    uint64_t offset;
+    uint64_t size;
+    
+    
+    Elf64_Shdr *shdr;
+    char     *bytes;
 };
+
+// Global arrays
+struct section** __sections;
 
 // Begin
 int main(int argc, char* argv[]){
@@ -99,7 +115,9 @@ int main(int argc, char* argv[]){
     // Locate and dump the section header table
     shdr_array = (Elf64_Shdr*)(incptr + ehdr->e_shoff);
     printf("shdr_array = %p\n", shdr_array);
-    dump_shdr(shdr_array, ehdr->e_shnum);
+    __sections = malloc(sizeof(struct section*) * ehdr->e_shnum);
+    create_sections(shdr_array, ehdr->e_shnum);
+    dump_sections(ehdr->e_shnum);
     return 0;
 }
 
@@ -157,28 +175,29 @@ void dump_phdr(Elf64_Phdr *phdr, int num_entries){
     }
 }
 
-void dump_shdr(Elf64_Shdr *shdr, int num_entries){
-    printf("======== SECTION HEADER TABLE ========\n");
-
-    char *incptr;
-
+void create_sections(Elf64_Shdr *shdr, int num_entries){
     // Get the string table entry
     // It is the section header table's address + (e_shstrndx * size of an entry)
-    incptr = (char*)shdr;
-    Elf64_Shdr *sh_strentry = (Elf64_Shdr*)(incptr + (ehdr->e_shstrndx * sizeof(Elf64_Shdr)));
-    printf("\t\tsh_strentry = %p\n", sh_strentry);
+    char *incptr = (char*)shdr;
 
     // Get the strtab address
+    Elf64_Shdr *sh_strentry = (Elf64_Shdr*)(incptr + (ehdr->e_shstrndx * sizeof(Elf64_Shdr)));
     char *strtab = (char*)ehdr + sh_strentry->sh_offset;
-    printf("\t\tstrtab located at %p\n", strtab);
 
     int i;
     for(i=0;i<num_entries;i++){
-        printf("\tSection #%d\n", i);
-        printf("\t\tshdr located at - %p\n", shdr);
-        char *str_section = strtab + shdr->sh_name;
-        printf("\t\tsh_name(index) = 0x%" PRIu32 " = %s" "\n", shdr->sh_name, str_section );
+        struct section *s = malloc(sizeof(struct section));
+        s->num = i;
 
+        // Section name
+        char *str_section = strtab + shdr->sh_name;
+        s->name = malloc(strlen(str_section)+1);
+        if(s->name == NULL){
+            printf("error!\n");
+        }
+        strcpy(s->name, str_section);
+
+        // Section type
         const char *sh_type_str;
         int sh_type = shdr->sh_type;
         if(sh_type < 12){
@@ -189,16 +208,65 @@ void dump_shdr(Elf64_Shdr *shdr, int num_entries){
             sh_type_str = "APPLICATION-SPECIFIC";
         } else {
             sh_type_str = "UNKNOWN";
-        } 
-        printf("\t\tsh_type = 0x%" PRIx32 " = %s\n", sh_type, sh_type_str);
+        }
+        s->type = sh_type;
+        s->type_str = malloc(strlen(sh_type_str)+1);
+        strcpy(s->type_str, sh_type_str);
 
-
+        // Section flags
         const char *sh_flags_str;
         uint8_t sh_flags = shdr->sh_flags & 0x7;
         sh_flags_str = SECTION_FLAG_TYPES[sh_flags];
+        s->flags = sh_flags;
+        s->flags_str = malloc(strlen(sh_flags_str)+1);
+        strcpy(s->flags_str, sh_flags_str);
+
+        s->addr = shdr->sh_addr;
+        s->offset = shdr->sh_offset;
+        s->size = shdr->sh_size;
+        s->shdr = shdr;
+
+        s->bytes = malloc(s->size);
+        memcpy(s->bytes, (char*)ehdr + s->offset, s->size);
+
+        __sections[i] = s;
+        shdr++;
+    }
+}
+
+void dump_sections(int num_entries){
+    printf("======== SECTION HEADER TABLE ========\n");
+
+    int i;
+    printf("sizeof(__sections) = %d\n", sizeof(__sections));
+    for(i=0;i<num_entries;i++){
+
+
+        printf("--------\n");
+        struct section *s = __sections[i];
+        printf("s.num = %d\n", s->num);
+        printf("s.name = %s\n", s->name);
+        printf("s.type = %d\n", s->type);
+        printf("s.type_str = %s\n", s->type_str);
+        printf("s.flags = %d\n", s->flags);
+        printf("s.flags_str = %s\n", s->flags_str);
+        printf("s.addr = %" PRIx64 "\n", s->addr);
+        printf("s.offset = %" PRIx64 "\n", s->offset);
+        printf("s.size = %" PRIx64 "\n", s->size);
+
+        int j;
+        unsigned char *byte;
+        for(j=0;j<s->size;j++){
+            byte = s->bytes + j;
+            //printf("byte addr = %x\n", byte);
+            printf("%x", *byte);
+        }
+        printf("\n");
+
+        /*
+        printf("\t\tsh_name(index) = 0x%" PRIu32 " = %s" "\n", shdr->sh_name, str_section );
+        printf("\t\tsh_type = 0x%" PRIx32 " = %s\n", sh_type, sh_type_str);
         printf("\t\tsh_flags = 0x%" PRIu64 " = %s\n", shdr->sh_flags, sh_flags_str);
-
-
         printf("\t\tsh_addr = 0x%" PRIx64 "\n", shdr->sh_addr);
         printf("\t\tsh_offset = 0x%" PRIx64 "\n", shdr->sh_offset);
         printf("\t\tsh_size = 0x%" PRIx64 "\n", shdr->sh_size);
@@ -219,9 +287,14 @@ void dump_shdr(Elf64_Shdr *shdr, int num_entries){
         }
         printf("\t\tsh_addralign = 0x%" PRIx64 "\n", shdr->sh_addralign);
         printf("\t\tsh_entsize = 0x%" PRIx64 "\n", shdr->sh_entsize);
-        shdr++;
-    }
+        
+        printf("\t\tCreating struct...\n");
+        
+        
 
+        shdr++;
+        */
+    }
 
 }
 
