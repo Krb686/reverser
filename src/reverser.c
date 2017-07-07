@@ -21,6 +21,22 @@
 //  - section header table
 //  - section header table entry
 //  - section
+//
+
+// Notes
+// .interp - path to interpreter
+// .note
+//   - namesz - # of bytes in name containing string representing entry owner/originator
+//   - descsz - # of bytes in desc containg the note descriptor
+//   - type - interpretation of descriptor. Implementation/owner specific
+//   - name
+//   - desc
+//
+//   .ABI-tag
+//     - name = 'GNU\0'
+//     - type = 1
+//     - descz >= 16
+//     - desc - 1st 32bit word = 0 (linux executeable), 2+3+4 = earliest compatible kernel version
 
 // Function prototypes
 void usage();
@@ -59,6 +75,10 @@ struct section {
     uint64_t addr;
     uint64_t offset;
     uint64_t size;
+    uint32_t link;
+    uint32_t info;
+    uint64_t addralign;
+    uint64_t entsize;
     
     
     Elf64_Shdr *shdr;
@@ -224,6 +244,11 @@ void create_sections(Elf64_Shdr *shdr, int num_entries){
         s->addr = shdr->sh_addr;
         s->offset = shdr->sh_offset;
         s->size = shdr->sh_size;
+        s->link = shdr->sh_link;
+        s->info = shdr->sh_info;
+        s->addralign = shdr->sh_addralign;
+        s->entsize = shdr->sh_entsize;
+
         s->shdr = shdr;
 
         s->bytes = malloc(s->size);
@@ -242,7 +267,7 @@ void dump_sections(int num_entries){
     for(i=0;i<num_entries;i++){
 
 
-        printf("--------\n");
+        printf("-------- Section Attributes --------\n");
         struct section *s = __sections[i];
         printf("s.num = %d\n", s->num);
         printf("s.name = %s\n", s->name);
@@ -253,23 +278,27 @@ void dump_sections(int num_entries){
         printf("s.addr = %" PRIx64 "\n", s->addr);
         printf("s.offset = %" PRIx64 "\n", s->offset);
         printf("s.size = %" PRIx64 "\n", s->size);
+        printf("s.link = %" PRIx32 "\n", s->link);
+        printf("s.info = %" PRIx32 "\n", s->info);
+        printf("s.addralign = %" PRIx64 "\n", s->addralign);
+        printf("s.entsize = %" PRIx64 "\n", s->entsize);
 
         int j;
         unsigned char *byte;
         for(j=0;j<s->size;j++){
             byte = s->bytes + j;
             //printf("byte addr = %x\n", byte);
-            printf("%x", *byte);
+            if(j%2 == 0){
+                printf(" ");
+            }
+            if(j%64 == 0){
+                printf("\n");
+            }
+            printf("%02x", *byte);
         }
         printf("\n");
 
         /*
-        printf("\t\tsh_name(index) = 0x%" PRIu32 " = %s" "\n", shdr->sh_name, str_section );
-        printf("\t\tsh_type = 0x%" PRIx32 " = %s\n", sh_type, sh_type_str);
-        printf("\t\tsh_flags = 0x%" PRIu64 " = %s\n", shdr->sh_flags, sh_flags_str);
-        printf("\t\tsh_addr = 0x%" PRIx64 "\n", shdr->sh_addr);
-        printf("\t\tsh_offset = 0x%" PRIx64 "\n", shdr->sh_offset);
-        printf("\t\tsh_size = 0x%" PRIx64 "\n", shdr->sh_size);
 
         // Special sh_link handling
         printf("\t\tsh_link = 0x%" PRIx32 "\n", shdr->sh_link);
@@ -285,14 +314,6 @@ void dump_sections(int num_entries){
         if(sh_type == SHT_REL || sh_type == SHT_RELA){
             printf("\t\t\t--> section header table index to relocatable section\n");
         }
-        printf("\t\tsh_addralign = 0x%" PRIx64 "\n", shdr->sh_addralign);
-        printf("\t\tsh_entsize = 0x%" PRIx64 "\n", shdr->sh_entsize);
-        
-        printf("\t\tCreating struct...\n");
-        
-        
-
-        shdr++;
         */
     }
 
