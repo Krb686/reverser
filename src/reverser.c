@@ -44,6 +44,8 @@ void dump_ehdr(Elf64_Ehdr*);
 void dump_phdr(Elf64_Phdr*, int );
 void create_sections(Elf64_Shdr*, int);
 void dump_sections(int);
+void decode_section(int);
+void print_bytes(char*, int);
 
 
 // Getopt variables
@@ -82,7 +84,7 @@ struct section {
     
     
     Elf64_Shdr *shdr;
-    char     *bytes;
+    unsigned char     *bytes;
 };
 
 // Global arrays
@@ -135,8 +137,14 @@ int main(int argc, char* argv[]){
     // Locate and dump the section header table
     shdr_array = (Elf64_Shdr*)(incptr + ehdr->e_shoff);
     printf("shdr_array = %p\n", shdr_array);
+
+    // Allocate memory for section pointer array
     __sections = malloc(sizeof(struct section*) * ehdr->e_shnum);
+
+    // Create the section structs
     create_sections(shdr_array, ehdr->e_shnum);
+
+    // Dump contents of the section structs
     dump_sections(ehdr->e_shnum);
     return 0;
 }
@@ -263,36 +271,39 @@ void dump_sections(int num_entries){
     printf("======== SECTION HEADER TABLE ========\n");
 
     int i;
-    printf("sizeof(__sections) = %d\n", sizeof(__sections));
+    printf("sizeof(__sections) = %" PRIu64 "\n", sizeof(__sections));
     for(i=0;i<num_entries;i++){
 
 
         printf("-------- Section Attributes --------\n");
         struct section *s = __sections[i];
-        printf("s.num = %d\n", s->num);
-        printf("s.name = %s\n", s->name);
-        printf("s.type = %d\n", s->type);
-        printf("s.type_str = %s\n", s->type_str);
-        printf("s.flags = %d\n", s->flags);
-        printf("s.flags_str = %s\n", s->flags_str);
-        printf("s.addr = %" PRIx64 "\n", s->addr);
-        printf("s.offset = %" PRIx64 "\n", s->offset);
-        printf("s.size = %" PRIx64 "\n", s->size);
-        printf("s.link = %" PRIx32 "\n", s->link);
-        printf("s.info = %" PRIx32 "\n", s->info);
-        printf("s.addralign = %" PRIx64 "\n", s->addralign);
-        printf("s.entsize = %" PRIx64 "\n", s->entsize);
+        printf("\ts.num = %d\n", s->num);
+        printf("\ts.name = %s\n", s->name);
+        printf("\ts.type = %d\n", s->type);
+        printf("\ts.type_str = %s\n", s->type_str);
+        printf("\ts.flags = %d\n", s->flags);
+        printf("\ts.flags_str = %s\n", s->flags_str);
+        printf("\ts.addr = %" PRIx64 "\n", s->addr);
+        printf("\ts.offset = %" PRIx64 "\n", s->offset);
+        printf("\ts.size = %" PRIx64 "\n", s->size);
+        printf("\ts.link = %" PRIx32 "\n", s->link);
+        printf("\ts.info = %" PRIx32 "\n", s->info);
+        printf("\ts.addralign = %" PRIx64 "\n", s->addralign);
+        printf("\ts.entsize = %" PRIx64 "\n", s->entsize);
 
         int j;
         unsigned char *byte;
+        printf("\tsection bytes:\n");
         for(j=0;j<s->size;j++){
             byte = s->bytes + j;
             //printf("byte addr = %x\n", byte);
-            if(j%2 == 0){
+            if(j%2 == 0 && j != 0){
                 printf(" ");
             }
-            if(j%64 == 0){
-                printf("\n");
+            if(j == 0){
+                printf("\t\t");
+            } else if(j%64 == 0){
+                printf("\n\t\t");
             }
             printf("%02x", *byte);
         }
@@ -315,8 +326,74 @@ void dump_sections(int num_entries){
             printf("\t\t\t--> section header table index to relocatable section\n");
         }
         */
+
+
+        decode_section(s->num);
     }
 
+}
+
+void decode_section(int s_num){
+    printf("\tdecoding section #%d\n", s_num);
+
+    struct section *s = __sections[s_num];
+
+    // Note sections
+    if(strcmp(s->type_str, "SHT_NOTE") == 0){
+        uint32_t namesz, descsz, type;
+        char *name, *desc;
+
+        // Copy namesz, descsz, and type bytes that are common to all 'note' sections
+        memcpy(&namesz, s->bytes, 4);
+        printf("\t\tnamesz = %" PRIu32 "\n", namesz);
+        memcpy(&descsz, (s->bytes + 4), 4);
+        printf("\t\tdescsz = %" PRIu32 "\n", descsz);
+        memcpy(&type, (s->bytes + 8), 4);
+        printf("\t\ttype = %" PRIu32 "\n", type);
+
+        // Allocate and copy name
+        name = malloc(namesz);
+        memcpy(name, (s->bytes + 12), namesz);
+        printf("\t\tname = %s\n", name);
+
+        // Allocate and copy desc
+        desc = malloc(descsz);
+        memcpy(desc, (s->bytes + 12 + namesz), descsz);
+        printf("\t\tdesc = ");
+        print_bytes(desc, descsz);
+
+        // .note.ABI-tag
+        if(strcmp(s->name, ".note.ABI-tag")){
+                    
+            //
+        // .note.gnu.build-id
+        } else if(strcmp(s->name, ".note.gnu.build-id")){
+        }
+        
+    // Dynamic symbol table
+    } else if(strcmp(s->type_str, "SHT_DYNSYM") == 0 || strcmp(s->type_str, "SHT_SYMTAB") == 0){
+        Elf64_Sym *sym = (Elf64_Sym*)s->bytes;
+        int i;
+        for(i=0;i<s->size/24;i++){
+            printf("\t\t---- symbol #%d ----\n", i);
+            printf("\t\t\tst_name = %08" PRIx32 "\n", sym->st_name);
+            printf("\t\t\tst_info = %02" PRIu8 "\n", sym->st_info);
+            printf("\t\t\tst_other = %02" PRIu8 "\n", sym->st_other);
+            printf("\t\t\tst_shndx = %04" PRIx16 "\n", sym->st_shndx);
+            printf("\t\t\tst_value = %016" PRIx64 "\n", sym->st_value);
+            printf("\t\t\tst_size = %016" PRIx64 "\n", sym->st_size);
+            sym++;
+        }
+        //
+    }
+}
+
+void print_bytes(char *byteptr, int n){
+    int i;
+    for(i=0;i<n;i++){
+        printf("%02x", (unsigned char)*byteptr++);
+    }
+    printf("\n");
 }
 
 void usage(){
