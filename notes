@@ -1,0 +1,16 @@
+Notes
+
+from - https://lwn.net/Articles/631631/
+
+1) (kernel) load_elf_binary()
+     - loads the binary and checks ELF validity
+     - loops over segment header table, scanning for 'PT_INTERP'
+     - check whether stack should be executable
+
+2) flush_old_exec()
+     - reset/clear state in kernel from previous program
+     - 
+
+3) setup_new_exec()
+     - 
+
