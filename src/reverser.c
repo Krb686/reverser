@@ -363,20 +363,37 @@ void decode_section(int s_num){
         print_bytes(desc, descsz);
 
         // .note.ABI-tag
-        if(strcmp(s->name, ".note.ABI-tag")){
-                    
+        if(strcmp(s->name, ".note.ABI-tag") == 0){
+            uint32_t data1, data2, data3, data4;
+            memcpy(&data1, s->bytes + 12 + namesz, 4); 
+            memcpy(&data2, s->bytes + 12 + namesz + 4, 4);
+            memcpy(&data3, s->bytes + 12 + namesz + 8, 4);
+            memcpy(&data4, s->bytes + 12 + namesz + 12, 4);
+
+            printf("\t\tdata1 = %" PRIu32 "\n", data1);
+            printf("\t\tdata2 = %" PRIu32 "\n", data2);
+            printf("\t\tdata3 = %" PRIu32 "\n", data3);
+            printf("\t\tdata4 = %" PRIu32 "\n", data4);
+
+            if(data1 == 0){
+                printf("\t\tdata block 1: 0 --> executable\n");
+            } else {
+
+            }
+            printf("\t\tdata blocks 2-4: earliest compatible kernel = %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n", data2, data3, data4);
             //
         // .note.gnu.build-id
-        } else if(strcmp(s->name, ".note.gnu.build-id")){
+        } else if(strcmp(s->name, ".note.gnu.build-id") == 0){
         }
         
-    // Dynamic symbol table
+    // Normal and Dynamic symbol table
     } else if(strcmp(s->type_str, "SHT_DYNSYM") == 0 || strcmp(s->type_str, "SHT_SYMTAB") == 0){
         Elf64_Sym *sym = (Elf64_Sym*)s->bytes;
+        struct section *s_strtab = __sections[s->link];
         int i;
         for(i=0;i<s->size/24;i++){
             printf("\t\t---- symbol #%d ----\n", i);
-            printf("\t\t\tst_name = %08" PRIx32 "\n", sym->st_name);
+            printf("\t\t\tst_name (index) = %08" PRIx32 " --> %s\n", sym->st_name, s_strtab->bytes+sym->st_name);
             printf("\t\t\tst_info = %02" PRIu8 "\n", sym->st_info);
             printf("\t\t\tst_other = %02" PRIu8 "\n", sym->st_other);
             printf("\t\t\tst_shndx = %04" PRIx16 "\n", sym->st_shndx);
@@ -384,7 +401,20 @@ void decode_section(int s_num){
             printf("\t\t\tst_size = %016" PRIx64 "\n", sym->st_size);
             sym++;
         }
-        //
+    // String tables
+    } else if(strcmp(s->type_str, "SHT_STRTAB") == 0){
+        printf("\t\tstrings:\n");
+
+        int offset = 0;
+        char *base = s->bytes+1; // skip over the initial null string
+        while(offset < s->size-1){
+            printf("\t\t\t%s\n", (base + offset));
+            offset = offset + strlen(base+offset) + 1;
+       }
+    } else {
+        if(strcmp(s->name, ".interp") == 0){
+            printf("\t\tinterpreter = %s\n", s->bytes);
+        }
     }
 }
 
