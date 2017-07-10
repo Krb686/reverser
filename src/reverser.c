@@ -90,6 +90,7 @@ struct section {
 // Global arrays
 struct section** __sections;
 
+
 // Begin
 int main(int argc, char* argv[]){
 
@@ -234,6 +235,13 @@ void create_sections(Elf64_Shdr *shdr, int num_entries){
             sh_type_str = "PROCESSOR-SPECIFIC";
         } else if(shdr->sh_type >= SHT_LOUSER){
             sh_type_str = "APPLICATION-SPECIFIC";
+        } else if(sh_type == SHT_GNU_verdef){
+            sh_type_str = "SHT_GNU_verdef";
+        } else if(sh_type == SHT_GNU_verneed){
+            sh_type_str = "SHT_GNU_verneed";
+        } else if(sh_type == SHT_GNU_versym){
+            sh_type_str = "SHT_GNU_versym";
+        
         } else {
             sh_type_str = "UNKNOWN";
         }
@@ -279,7 +287,7 @@ void dump_sections(int num_entries){
         struct section *s = __sections[i];
         printf("\ts.num = %d\n", s->num);
         printf("\ts.name = %s\n", s->name);
-        printf("\ts.type = %d\n", s->type);
+        printf("\ts.type = %x\n", s->type);
         printf("\ts.type_str = %s\n", s->type_str);
         printf("\ts.flags = %d\n", s->flags);
         printf("\ts.flags_str = %s\n", s->flags_str);
@@ -343,25 +351,27 @@ void decode_section(int s_num){
         uint32_t namesz, descsz, type;
         char *name, *desc;
 
+        printf("\t\t---- SHT_NOTE Generic ----\n");
         // Copy namesz, descsz, and type bytes that are common to all 'note' sections
         memcpy(&namesz, s->bytes, 4);
-        printf("\t\tnamesz = %" PRIu32 "\n", namesz);
+        printf("\t\t\tnamesz = %" PRIu32 "\n", namesz);
         memcpy(&descsz, (s->bytes + 4), 4);
-        printf("\t\tdescsz = %" PRIu32 "\n", descsz);
+        printf("\t\t\tdescsz = %" PRIu32 "\n", descsz);
         memcpy(&type, (s->bytes + 8), 4);
-        printf("\t\ttype = %" PRIu32 "\n", type);
+        printf("\t\t\ttype = %" PRIu32 "\n", type);
 
         // Allocate and copy name
         name = malloc(namesz);
         memcpy(name, (s->bytes + 12), namesz);
-        printf("\t\tname = %s\n", name);
+        printf("\t\t\tname = %s\n", name);
 
         // Allocate and copy desc
         desc = malloc(descsz);
         memcpy(desc, (s->bytes + 12 + namesz), descsz);
-        printf("\t\tdesc = ");
+        printf("\t\t\tdesc = ");
         print_bytes(desc, descsz);
 
+        printf("\t\t---- Section Specific ----\n");
         // .note.ABI-tag
         if(strcmp(s->name, ".note.ABI-tag") == 0){
             uint32_t data1, data2, data3, data4;
@@ -370,20 +380,22 @@ void decode_section(int s_num){
             memcpy(&data3, s->bytes + 12 + namesz + 8, 4);
             memcpy(&data4, s->bytes + 12 + namesz + 12, 4);
 
-            printf("\t\tdata1 = %" PRIu32 "\n", data1);
-            printf("\t\tdata2 = %" PRIu32 "\n", data2);
-            printf("\t\tdata3 = %" PRIu32 "\n", data3);
-            printf("\t\tdata4 = %" PRIu32 "\n", data4);
+            printf("\t\t\tdata1 = %" PRIu32 "\n", data1);
+            printf("\t\t\tdata2 = %" PRIu32 "\n", data2);
+            printf("\t\t\tdata3 = %" PRIu32 "\n", data3);
+            printf("\t\t\tdata4 = %" PRIu32 "\n", data4);
 
             if(data1 == 0){
-                printf("\t\tdata block 1: 0 --> executable\n");
+                printf("\t\t\tdata block 1: 0 --> executable\n");
             } else {
-
+                printf("\t\t\tdata block 1: UNKNOWN!\n");
             }
-            printf("\t\tdata blocks 2-4: earliest compatible kernel = %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n", data2, data3, data4);
+            printf("\t\t\tdata blocks 2-4: earliest compatible kernel = %" PRIu32 ".%" PRIu32 ".%" PRIu32 "\n", data2, data3, data4);
             //
         // .note.gnu.build-id
         } else if(strcmp(s->name, ".note.gnu.build-id") == 0){
+            printf("\t\t\tSHA1 Build ID: ");
+            print_bytes(desc, descsz);
         }
         
     // Normal and Dynamic symbol table
@@ -411,6 +423,12 @@ void decode_section(int s_num){
             printf("\t\t\t%s\n", (base + offset));
             offset = offset + strlen(base+offset) + 1;
        }
+    } else if(strcmp(s->type_str, "SHT_GNU_versym") == 0){
+        int i;
+        int num_entries = s->size / 2;
+        for(i=0;i<num_entries;i++){
+            printf("\t\tsymbol version: %" PRIu16 "\n", (uint16_t*)*(s->bytes + 2*i));
+        }
     } else {
         if(strcmp(s->name, ".interp") == 0){
             printf("\t\tinterpreter = %s\n", s->bytes);
