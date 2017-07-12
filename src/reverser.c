@@ -22,6 +22,8 @@
 //  - section header table entry
 //  - section
 //
+//  - .gnu.hash decode
+//  - .rela.dyn meaning
 
 // Notes
 // .interp - path to interpreter
@@ -87,8 +89,16 @@ struct section {
     unsigned char     *bytes;
 };
 
+struct symbol {
+    char *name;
+    uint8_t version;
+    uint8_t type;
+};
+
 // Global arrays
 struct section** __sections;
+struct symbol**  __symbols;
+
 
 
 // Begin
@@ -428,6 +438,38 @@ void decode_section(int s_num){
         int num_entries = s->size / 2;
         for(i=0;i<num_entries;i++){
             printf("\t\tsymbol version: %" PRIu16 "\n", (uint16_t*)*(s->bytes + 2*i));
+        }
+    } else if(strcmp(s->type_str, "SHT_GNU_verneed") == 0){
+        int num = s->size / sizeof(Elf64_Verneed);
+        Elf64_Verneed *verneed = (Elf64_Verneed *)s->bytes;
+        int i;
+        for(i=0;i<num;i++){
+            printf("\t\t---- verneed #%d ----\n", i);
+            printf("\t\t\tvn_version = %" PRIu16 "\n", verneed->vn_version);
+            printf("\t\t\tvn_cnt = %" PRIu16 "\n", verneed->vn_cnt);
+            printf("\t\t\tvn_file = %" PRIu32 "\n", verneed->vn_file);
+            printf("\t\t\tvn_aux = %" PRIu32 "\n", verneed->vn_aux);
+            printf("\t\t\tvn_next = %" PRIu32 "\n", verneed->vn_next);
+            verneed++;
+        }
+    } else if(strcmp(s->type_str, "SHT_RELA") == 0){
+        if(strcmp(s->name, ".rela.dyn") == 0){
+            Elf64_Rela *rela = (Elf64_Rela*)s->bytes;
+            printf("\t\t---- relocation ----\n");
+            printf("\t\t\tr_offset = %" PRIu64 "\n", rela->r_offset);
+            printf("\t\t\tr_info = 0x%" PRIx64 "\n", rela->r_info);
+            printf("\t\t\tr_addend = 0x%" PRIx64 "\n", rela->r_addend);
+        } else if(strcmp(s->name, ".rela.plt") == 0){
+            int num = s->size / sizeof(Elf64_Rela);
+            int i;
+            Elf64_Rela *rela = (Elf64_Rela*)s->bytes;
+            for(i=0;i<num;i++){
+                printf("\t\t---- relocation ----\n");
+                printf("\t\t\tr_offset = %" PRIu64 "\n", rela->r_offset);
+                printf("\t\t\tr_info = 0x%" PRIx64 "\n", rela->r_info);
+                printf("\t\t\tr_addend = 0x%" PRIx64 "\n", rela->r_addend);
+                rela++;
+            }
         }
     } else {
         if(strcmp(s->name, ".interp") == 0){
