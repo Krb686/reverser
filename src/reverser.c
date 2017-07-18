@@ -11,7 +11,11 @@
 #include <sys/stat.h>
 
 #include <unistd.h>
+
 #define EXIT_BAD_ARGS 1
+#define OPCODE 0
+#define MODRM  1
+#define SIB    2
 
 //TODO - objects to create
 //  - elf header
@@ -48,6 +52,8 @@ void create_sections(Elf64_Shdr*, int);
 void dump_sections(int);
 void decode_section(int);
 void print_bytes(char*, int);
+void decode_instructions(unsigned char*, int);
+void add_instr(char*);
 
 
 // Getopt variables
@@ -95,9 +101,36 @@ struct symbol {
     uint8_t type;
 };
 
+struct instr {
+    char *name;
+    char *bytes;
+    struct section *sptr;
+    uint64_t offset;
+};
+
 // Global arrays
 struct section** __sections;
 struct symbol**  __symbols;
+
+int __bytenum = 0;
+int __opfound = 0;
+
+const char *INSTR_NAMES[256] = { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "nop_m",    \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "sub", "", "",      \
+                                 "", "xor", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",        \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "mov", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""         };
 
 
 
@@ -157,6 +190,7 @@ int main(int argc, char* argv[]){
 
     // Dump contents of the section structs
     dump_sections(ehdr->e_shnum);
+
     return 0;
 }
 
@@ -474,6 +508,9 @@ void decode_section(int s_num){
     } else {
         if(strcmp(s->name, ".interp") == 0){
             printf("\t\tinterpreter = %s\n", s->bytes);
+        } else if(strcmp(s->name, ".text") == 0){
+            printf("decoding instructions\n");
+            decode_instructions(s->bytes, s->size);
         }
     }
 }
@@ -484,6 +521,210 @@ void print_bytes(char *byteptr, int n){
         printf("%02x", (unsigned char)*byteptr++);
     }
     printf("\n");
+}
+
+void decode_instructions(unsigned char *byte, int numbytes){
+    __bytenum = 0;
+    int argbytes = 0;
+    int opsize_override = 0;
+    int nopm = 0;
+    int modrm = 0;
+
+
+    char *i_start = byte;
+    int i_len = 0;
+    char *i_name;
+
+    int group1 = 0;
+    int __curbyte_t = 0;
+    int __nexbyte_t = 0;
+
+    uint8_t modefield = 0;
+    uint8_t regfield = 0;
+    uint8_t rmfield = 0;
+    while(__bytenum < numbytes){
+        if(__curbyte_t == OPCODE){
+        //if(__opfound == 0){
+            switch(*byte){
+                case 0x0f:
+                    
+                    //mark_instr(iname, "nop_m");
+                    nopm = 1;
+                    break;
+                case 0x1f:
+                   if(nopm == 1){
+
+                   } 
+                   break;
+                case 0x2d:
+                    //mark_instr("sub");
+                    argbytes = 4;
+                    break;
+                case 0x31: //xor
+                    __nexbyte_t = MODRM;
+                    break;
+                case 0x44:
+                    if(nopm == 1){
+                        argbytes = 2;
+                        __opfound = 0;
+                    }
+                    break;
+                case 0x47:
+                    add_prefix("REX.-RXB");
+                    break;
+                case 0x48:
+                    add_prefix("REX.W---");
+                    break;
+                case 0x49:
+                    add_prefix("REX.W--B");
+                    break;
+                case 0x50:
+                    //mark_instr("push");
+                    break;
+                case 0x55:
+                    //mark_instr("push");
+                    break;
+                case 0x66:
+                    add_prefix("operand size override");
+                    opsize_override = 1;
+                    break;
+                case 0x74:
+                    //TODO - this could also be 'jz'
+                    //mark_instr("je");
+                    argbytes = 1;
+                    break;
+                case 0x77:
+                    //mark_instr("ja");
+                    break;
+                case 0x83:
+                    group1 = 1;
+                    __opfound = 1;
+                    modrm = 1;
+                    break;
+                case 0x85:
+                    //mark_instr("test");
+                    break;
+                case 0x89:
+                    //mark_instr("mov");
+                    break;
+                case 0xb8:
+                    //mark_instr("mov");
+                    argbytes = 4;
+                    break;
+                case 0x5d:
+                    //mark_instr("pop");
+                    break;
+                case 0x5e:
+                    //mark_instr("pop");
+                    break;
+                case 0xc3:
+                    //mark_instr("retq");
+                    break;
+                case 0xc7:
+                    //mark_instr("mov");
+                    argbytes = 5;
+                    break;
+                case 0xe8:
+                    //mark_instr("call");
+                    argbytes = 4;
+                    break;
+                case 0xf4:
+                    //mark_instr("hlt");
+                    break;
+            }
+
+            i_name = INSTR_NAMES[*byte];
+
+            if(i_name != NULL && strcmp(i_name, "") == 0){
+                //printf("instr not implemented!\n");
+            } else {
+                printf("i_name = %s\n", i_name);
+                __opfound = 1;
+            }
+
+            //}
+            
+        } else {
+
+            // Group 1 instructions are defined by the 1st byte + bits 3-5 of byte 2
+            if(group1 == 1){
+                if(modrm == 1){
+                    modefield = (*byte >> 6) & 0x3;
+                    regfield = (*byte >> 3) & 0x7;
+                    rmfield = (*byte) & 0x7;
+
+                    printf("\t\tmodefield = %" PRIu8 "\n", modefield);
+                    printf("\t\tregfield = %" PRIu8 "\n", regfield);
+                    printf("\t\trmfield = %" PRIu8 "\n", rmfield);
+
+
+                    switch(regfield){
+                        case 0x00:
+                            //mark_instr("add");
+                            break;
+                        case 0x01:
+                           // mark_instr("or");
+                            break;
+                        case 0x02:
+                            //mark_instr("adc");
+                            break;
+                        case 0x03:
+                            //mark_instr("sbb");
+                            break;
+                        case 0x04:
+                            //mark_instr("and");
+                            break;
+                        case 0x05:
+                            //mark_instr("sub");
+                        case 0x06:
+                            //mark_instr("xor");
+                            break;
+                        case 0x07:
+                            //mark_instr("cmp");
+                            break;
+                    }
+                    modrm = 0;
+
+                    
+                }
+                group1 = 0;
+                
+            } else {
+                
+                printf("\t\targ byte = 0x%" PRIx8 "\n", (unsigned char)*byte);
+                printf("\t\targbytes = %d\n", argbytes);
+                if(argbytes > 0){
+                    argbytes--;
+
+                    if(argbytes == 0){
+                        __opfound = 0;
+                        opsize_override = 0;
+                        nopm = 0;
+                        add_instr(i_name);
+                    }
+                } else {
+                    __opfound = 0;
+                }
+            }
+        }
+
+        byte++;
+        __bytenum++;
+    }
+}
+
+void add_instr(char *name){
+    //struct instr *i = malloc(sizeof(struct instr));
+    //i->name = malloc(strlen(name)+1);        
+    //i->bytes = malloc();
+    
+
+    printf("\tname = %s, byte #%d\n", name, __bytenum);
+    __opfound = 0;
+}
+
+void add_prefix(char *prefix){
+    printf("\tprefix = %s\n", prefix);
 }
 
 void usage(){
