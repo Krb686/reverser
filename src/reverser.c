@@ -13,9 +13,13 @@
 #include <unistd.h>
 
 #define EXIT_BAD_ARGS 1
-#define OPCODE 0
-#define MODRM  1
-#define SIB    2
+
+#define OPCODE1 1
+#define OPCODE2 2
+#define OPCODE3 3
+#define MODRM   4
+#define SIB     5
+#define OPERAND 6
 
 //TODO - objects to create
 //  - elf header
@@ -121,7 +125,7 @@ const char *INSTR_NAMES[256] = { "", "", "", "", "", "", "", "", "", "", "", "",
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "sub", "", "",      \
                                  "", "xor", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",        \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+                                 "push", "", "", "", "push", "", "", "", "", "", "", "", "", "", "pop", "",         \
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
                                  "", "", "", "", "", "", "", "", "", "mov", "", "", "", "", "", "",         \
@@ -132,6 +136,28 @@ const char *INSTR_NAMES[256] = { "", "", "", "", "", "", "", "", "", "", "", "",
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
                                  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""         };
+
+const char *INSTR_NAMES_GROUP1[8]  = { "add", "or", "adc", "sbb", "and", "sub", "xor", "cmp" };
+const char *INSTR_NAMES_GROUP11[8] = { "mov", "",   "",    "",    "",    "",    "",    "xbegin" };
+
+
+const int STATE_NEXT_MAP[256] = { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, OPERAND, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, OPCODE1, OPCODE1, 9, 9, 9, 9, 9, 9, \
+                                  OPCODE1, 9, 9, 9, OPCODE1, 9, 9, 9, 9, 9, 9, 9, 9, 9, OPCODE1, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, MODRM, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+
 
 
 
@@ -511,7 +537,7 @@ void decode_section(int s_num){
         if(strcmp(s->name, ".interp") == 0){
             printf("\t\tinterpreter = %s\n", s->bytes);
         } else if(strcmp(s->name, ".text") == 0){
-            printf("decoding instructions\n");
+            printf("\t\tdecoding instructions\n");
             decode_instructions(s->bytes, s->size);
         }
     }
@@ -535,19 +561,26 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
     unsigned char *i_start = byte;
     int i_len = 0;
-    const char *i_name;
+    const char *instr_name;
 
     int group1 = 0;
-    int __curbyte_t = 0;
-    int __nexbyte_t = 0;
+    int group11 = 0;
 
     uint8_t modefield = 0;
     uint8_t regfield = 0;
     uint8_t rmfield = 0;
+
+    // TODO - make this into more of a state machine
+    int __state       = OPCODE1;
+    int __state_next  = OPCODE1;
+
+    int num_operands = 0;
+
+    // Loop over all bytes
     while(__bytenum < numbytes){
-        if(__curbyte_t == OPCODE){
-        //if(__opfound == 0){
-            switch(*byte){
+        switch(__state){
+            case OPCODE1:
+                switch(*byte){
                 case 0x0f:
                     
                     //mark_instr(iname, "nop_m");
@@ -563,7 +596,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     argbytes = 4;
                     break;
                 case 0x31: //xor
-                    __nexbyte_t = MODRM;
+                    num_operands = 1;
                     break;
                 case 0x44:
                     if(nopm == 1){
@@ -600,14 +633,12 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0x83:
                     group1 = 1;
-                    __opfound = 1;
-                    modrm = 1;
                     break;
                 case 0x85:
                     //mark_instr("test");
                     break;
                 case 0x89:
-                    //mark_instr("mov");
+                    num_operands = 0;
                     break;
                 case 0xb8:
                     //mark_instr("mov");
@@ -623,8 +654,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     //mark_instr("retq");
                     break;
                 case 0xc7:
-                    //mark_instr("mov");
-                    argbytes = 5;
+                    group11 = 1;
                     break;
                 case 0xe8:
                     //mark_instr("call");
@@ -633,27 +663,96 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 case 0xf4:
                     //mark_instr("hlt");
                     break;
-            }
+                }
 
-            i_name = INSTR_NAMES[*byte];
+                instr_name = INSTR_NAMES[*byte];
 
-            if(i_name != NULL && strcmp(i_name, "") == 0){
-                //printf("instr not implemented!\n");
-            } else {
-                printf("i_name = %s\n", i_name);
-                __opfound = 1;
-            }
+                if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                    //printf("instr not implemented!\n");
+                } else {
+                    printf("\t\t\tinstr_name = %s\n", instr_name);
+                }
 
-            //}
-            
-        } else {
 
-            // Group 1 instructions are defined by the 1st byte + bits 3-5 of byte 2
-            if(group1 == 1){
-                if(modrm == 1){
+                __state_next = STATE_NEXT_MAP[*byte];
+                printf("\t\t\t\tnext state --> %d\n", __state_next);
+
+                
+
+                break;
+            case OPCODE2:
+                break;
+            case OPCODE3:
+                break;
+            case MODRM:
+
+                if(group1 == 1){
                     modefield = (*byte >> 6) & 0x3;
                     regfield = (*byte >> 3) & 0x7;
                     rmfield = (*byte) & 0x7;
+
+                    instr_name = INSTR_NAMES_GROUP1[regfield];
+                    if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        //printf("instr not implemented!\n");
+                    } else {
+                        printf("\t\t\tinstr_name = %s\n", instr_name);
+                    }
+
+                    num_operands = 1;
+                    __state_next = OPERAND;
+                }
+
+                if(group11 == 0){
+                    modefield = (*byte >> 6) & 0x3;
+                    regfield = (*byte >> 3) & 0x7;
+                    rmfield = (*byte) & 0x7;
+
+                    instr_name = INSTR_NAMES_GROUP11[regfield];
+                    // TODO - remove this duplicate code
+                    if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        //printf("instr not implemented!\n");
+                    } else {
+                        printf("\t\t\tinstr_name = %s\n", instr_name);
+                    }
+                    
+                }
+
+
+                if(num_operands > 0){
+                    __state_next = OPERAND;
+                } else {
+                    __state_next = OPCODE1;
+                }
+                break;
+            case OPERAND:
+                if(num_operands > 0){
+                    num_operands--;
+                    if(num_operands == 0){
+                        __state_next = OPCODE1;
+                    }
+                } else {
+                    __state_next = OPCODE1;
+                    // Reset flags
+                    group1 = 0;
+                }
+
+                break;
+        }
+
+        // Assign the new state
+        __state = __state_next;
+
+
+            
+
+            //}
+            
+
+            /*
+            // Group 1 instructions are defined by the 1st byte + bits 3-5 of byte 2
+            if(group1 == 1){
+                if(modrm == 1){
+                    
 
                     printf("\t\tmodefield = %" PRIu8 "\n", modefield);
                     printf("\t\tregfield = %" PRIu8 "\n", regfield);
@@ -702,13 +801,13 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         __opfound = 0;
                         opsize_override = 0;
                         nopm = 0;
-                        add_instr(i_name);
+                        add_instr(instr_name);
                     }
                 } else {
                     __opfound = 0;
                 }
             }
-        }
+            */
 
         byte++;
         __bytenum++;
