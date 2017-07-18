@@ -53,7 +53,8 @@ void dump_sections(int);
 void decode_section(int);
 void print_bytes(char*, int);
 void decode_instructions(unsigned char*, int);
-void add_instr(char*);
+void add_instr(const char*);
+void add_prefix(char*);
 
 
 // Getopt variables
@@ -461,17 +462,18 @@ void decode_section(int s_num){
     } else if(strcmp(s->type_str, "SHT_STRTAB") == 0){
         printf("\t\tstrings:\n");
 
-        int offset = 0;
-        char *base = s->bytes+1; // skip over the initial null string
-        while(offset < s->size-1){
-            printf("\t\t\t%s\n", (base + offset));
-            offset = offset + strlen(base+offset) + 1;
+        // Loop over strings in the SHT_STRTAB contents
+        unsigned char *base = s->bytes+1; // skip over the initial null string
+        unsigned char *str = base;
+        while(str < base + s->size-1){
+            printf("\t\t\t%s\n", str);
+            str = str + strlen((const char *)str) + 1;
        }
     } else if(strcmp(s->type_str, "SHT_GNU_versym") == 0){
         int i;
         int num_entries = s->size / 2;
         for(i=0;i<num_entries;i++){
-            printf("\t\tsymbol version: %" PRIu16 "\n", (uint16_t*)*(s->bytes + 2*i));
+            printf("\t\tsymbol version: %" PRIu16 "\n", *(s->bytes + 2*i));
         }
     } else if(strcmp(s->type_str, "SHT_GNU_verneed") == 0){
         int num = s->size / sizeof(Elf64_Verneed);
@@ -531,9 +533,9 @@ void decode_instructions(unsigned char *byte, int numbytes){
     int modrm = 0;
 
 
-    char *i_start = byte;
+    unsigned char *i_start = byte;
     int i_len = 0;
-    char *i_name;
+    const char *i_name;
 
     int group1 = 0;
     int __curbyte_t = 0;
@@ -713,7 +715,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
     }
 }
 
-void add_instr(char *name){
+void add_instr(const char *name){
     //struct instr *i = malloc(sizeof(struct instr));
     //i->name = malloc(strlen(name)+1);        
     //i->bytes = malloc();
