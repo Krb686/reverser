@@ -14,12 +14,21 @@
 
 #define EXIT_BAD_ARGS 1
 
-#define OPCODE1 1
-#define OPCODE2 2
-#define OPCODE3 3
+#define OPCODE 1
 #define MODRM   4
 #define SIB     5
 #define OPERAND 6
+
+#define BYTE2BINPAT "%c%c%c%c%c%c%c%c"
+#define BYTE2BIN(byte)       \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0')
 
 //TODO - objects to create
 //  - elf header
@@ -59,6 +68,8 @@ void print_bytes(char*, int);
 void decode_instructions(unsigned char*, int);
 void add_instr(const char*);
 void add_prefix(char*);
+void change_state(int);
+void print_instruction(char*, uint8_t*);
 
 
 // Getopt variables
@@ -120,43 +131,136 @@ struct symbol**  __symbols;
 int __bytenum = 0;
 int __opfound = 0;
 
-const char *INSTR_NAMES[256] = { "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "nop_m",    \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "sub", "", "",      \
-                                 "", "xor", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",        \
-                                 "push", "", "", "", "push", "", "", "", "", "", "", "", "", "", "pop", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "mov", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-                                 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""         };
+const char *INSTR_NAMES[3][256] = 
+{ 
+    {
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "-",    \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "pop",  \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "sub", "", "",      \
+        "", "xor", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "", "-", "-", "", "", "", "", "", "",        \
+        "push", "", "", "", "push", "push", "", "", "", "", "", "", "", "pop", "pop", "",         \
+        "", "", "", "", "", "", "-", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "je", "", "", "ja", "", "", "", "", "", "", "", "",         \
+        "", "", "", "-", "", "test", "", "", "", "mov", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "mov", "", "", "", "", "", "", "mov",         \
+        "", "", "", "ret", "", "", "", "-", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "call", "", "", "", "", "", "", "",         \
+        "", "", "", "", "hlt", "", "", "", "", "", "", "", "", "", "", "-"
+    },
+    {
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",    \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "nop",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",        \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    }, 
+    {
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",    \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",        \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    }
+};
 
-const char *INSTR_NAMES_GROUP1[8]  = { "add", "or", "adc", "sbb", "and", "sub", "xor", "cmp" };
+const int STATE_NEXT_MAP[3][256] = 
+{ 
+    {
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, 9, \
+        9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, 9, 9, 9, 9, 9, \
+        OPCODE, 9, 9, 9, OPCODE, OPCODE, 9, 9, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, \
+        9, 9, 9, 9, 9, 9, OPCODE, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, OPERAND, 9, 9, OPERAND, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, MODRM, 9, MODRM, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, 9, 9, 9, 9, 9, OPERAND, \
+        9, 9, 9, OPCODE, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, OPCODE, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM 
+    },
+    {
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 
+    },
+    {
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 
+    }
+};
+
+
+
+const char *INSTR_NAMES_GROUP1[8] = { "add", "or", "adc", "sbb", "and", "sub", "xor", "cmp" };
+const char *INSTR_NAMES_GROUP5[8] = { "inc", "dec", "call", "call", "jmp", "jmp", "push", "" };
 const char *INSTR_NAMES_GROUP11[8] = { "mov", "",   "",    "",    "",    "",    "",    "xbegin" };
+const char *REX_STRS[16] = { "----", "---B", "--X-", "--XB", "-R--", "-R-B", "-RX-", "-RXB", "W---", "W--B", "W-X-", "W-XB", "WR--", "WR-B", "WRX-", "WRXB", };
 
 
-const int STATE_NEXT_MAP[256] = { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, OPERAND, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, OPCODE1, OPCODE1, 9, 9, 9, 9, 9, 9, \
-                                  OPCODE1, 9, 9, 9, OPCODE1, 9, 9, 9, 9, 9, 9, 9, 9, 9, OPCODE1, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, MODRM, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-                                  9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
+int OPERAND_BYTES[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
+const char *STATE_NEXT_STRINGS[7] = { "", "OPCODE", "", "", "MODRM", "SIB", "OPERAND" };
+
+
+
+int __state_next  = OPCODE;
 
 
 
@@ -554,64 +658,63 @@ void print_bytes(char *byteptr, int n){
 void decode_instructions(unsigned char *byte, int numbytes){
     __bytenum = 0;
     int argbytes = 0;
-    int opsize_override = 0;
-    int nopm = 0;
     int modrm = 0;
 
+    uint8_t opcode_sz = 1;
 
     unsigned char *i_start = byte;
     int i_len = 0;
     const char *instr_name;
 
-    int group1 = 0;
-    int group11 = 0;
+    int groupnum = 0;
 
     uint8_t modefield = 0;
     uint8_t regfield = 0;
     uint8_t rmfield = 0;
 
-    // TODO - make this into more of a state machine
-    int __state       = OPCODE1;
-    int __state_next  = OPCODE1;
+    uint8_t prefix_rex = 0;
+    uint8_t prefix_oper = 0;
 
+    // TODO - make this into more of a state machine
+    int __state       = OPCODE;
+    
+    int flag_nop = 0;
     int num_operands = 0;
+    int op_bytes_index = 0;
 
     // Loop over all bytes
     while(__bytenum < numbytes){
+        printf("byte = %x\n", *byte);
         switch(__state){
-            case OPCODE1:
+            case OPCODE:
                 switch(*byte){
                 case 0x0f:
-                    
-                    //mark_instr(iname, "nop_m");
-                    nopm = 1;
-                    break;
-                case 0x1f:
-                   if(nopm == 1){
-
-                   } 
-                   break;
-                case 0x2d:
-                    //mark_instr("sub");
-                    argbytes = 4;
-                    break;
-                case 0x31: //xor
-                    num_operands = 1;
-                    break;
-                case 0x44:
-                    if(nopm == 1){
-                        argbytes = 2;
-                        __opfound = 0;
+                    if(opcode_sz == 1){
+                        opcode_sz = 2; 
                     }
                     break;
+                case 0x1f:
+                   if(opcode_sz == 2){
+                       num_operands = 1;
+                       flag_nop = 1;
+                   }
+                   break;
+                case 0x2d:
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 4;
+                    break;
+                case 0x31: //xor
+                    break;
+                case 0x44:
+                    break;
                 case 0x47:
-                    add_prefix("REX.-RXB");
+                    prefix_rex = *byte & 0xF;
                     break;
                 case 0x48:
-                    add_prefix("REX.W---");
+                    prefix_rex = *byte & 0xF;
                     break;
                 case 0x49:
-                    add_prefix("REX.W--B");
+                    prefix_rex = *byte & 0xF;
                     break;
                 case 0x50:
                     //mark_instr("push");
@@ -620,30 +723,33 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     //mark_instr("push");
                     break;
                 case 0x66:
-                    add_prefix("operand size override");
-                    opsize_override = 1;
+                    prefix_oper = 1;
                     break;
                 case 0x74:
-                    //TODO - this could also be 'jz'
-                    //mark_instr("je");
-                    argbytes = 1;
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 1;
                     break;
                 case 0x77:
-                    //mark_instr("ja");
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 1;
                     break;
                 case 0x83:
-                    group1 = 1;
+                    printf("\t\t\t\tgroup 1\n");
+                    groupnum = 1;
+                    // Ev, Ib (1 modrm byte, 1 imm byte)
+                    OPERAND_BYTES[0] = 1;
                     break;
                 case 0x85:
-                    //mark_instr("test");
                     break;
                 case 0x89:
-                    num_operands = 0;
                     break;
                 case 0xb8:
-                    //mark_instr("mov");
-                    argbytes = 4;
+                    OPERAND_BYTES[0] = 4;
+                    num_operands = 1;
                     break;
+                case 0xbf:
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 4;
                 case 0x5d:
                     //mark_instr("pop");
                     break;
@@ -654,39 +760,43 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     //mark_instr("retq");
                     break;
                 case 0xc7:
-                    group11 = 1;
+                    groupnum = 11;
+                    printf("\t\t\t\tgroup 11\n");
+                    // Ev, Iz (1 modrm byte, 1 immediate word (16 bit operand size) / double word (32 or 64 bit operand size)
+                    OPERAND_BYTES[0] = 4;
                     break;
                 case 0xe8:
-                    //mark_instr("call");
-                    argbytes = 4;
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 4;
                     break;
                 case 0xf4:
-                    //mark_instr("hlt");
                     break;
+                case 0xff:
+                    groupnum = 5;
                 }
 
-                instr_name = INSTR_NAMES[*byte];
+                instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
 
                 if(instr_name != NULL && strcmp(instr_name, "") == 0){
                     //printf("instr not implemented!\n");
                 } else {
-                    printf("\t\t\tinstr_name = %s\n", instr_name);
+                    if(strcmp(instr_name, "-") == 0){
+                        // instruction can't be determined yet
+                    } else {
+                        print_instruction(instr_name, &prefix_rex);
+                    }
+                    
+                    change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
                 }
 
-
-                __state_next = STATE_NEXT_MAP[*byte];
-                printf("\t\t\t\tnext state --> %d\n", __state_next);
-
-                
-
-                break;
-            case OPCODE2:
-                break;
-            case OPCODE3:
                 break;
             case MODRM:
+                printf("MODRM\n");
+                switch(groupnum){
 
-                if(group1 == 1){
+                case 0:
+                    break;
+                case 1:
                     modefield = (*byte >> 6) & 0x3;
                     regfield = (*byte >> 3) & 0x7;
                     rmfield = (*byte) & 0x7;
@@ -695,14 +805,26 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     if(instr_name != NULL && strcmp(instr_name, "") == 0){
                         //printf("instr not implemented!\n");
                     } else {
-                        printf("\t\t\tinstr_name = %s\n", instr_name);
+                        print_instruction(instr_name, &prefix_rex);
                     }
 
                     num_operands = 1;
-                    __state_next = OPERAND;
-                }
+                    groupnum = 0;
+                    break;
+                case 5:
+                    modefield = (*byte >> 6) & 0x3;
+                    regfield = (*byte >> 3) & 0x7;
+                    rmfield = (*byte) & 0x7;
 
-                if(group11 == 0){
+                    instr_name = INSTR_NAMES_GROUP5[regfield];
+                    if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        printf("instr not implemented!\n");
+                    } else {
+                        print_instruction(instr_name, &prefix_rex);
+                    }
+                    groupnum = 0;
+                    break;
+                case 11:
                     modefield = (*byte >> 6) & 0x3;
                     regfield = (*byte >> 3) & 0x7;
                     rmfield = (*byte) & 0x7;
@@ -710,36 +832,73 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     instr_name = INSTR_NAMES_GROUP11[regfield];
                     // TODO - remove this duplicate code
                     if(instr_name != NULL && strcmp(instr_name, "") == 0){
-                        //printf("instr not implemented!\n");
+                        printf("instr not implemented!\n");
                     } else {
-                        printf("\t\t\tinstr_name = %s\n", instr_name);
+                        print_instruction(instr_name, &prefix_rex);
                     }
-                    
+
+                    num_operands = 1;
+                    groupnum = 0;
+                    break;
                 }
 
-
+                if(flag_nop){
+                        switch(*byte){
+                            case 0x44:
+                                OPERAND_BYTES[0] = 2;
+                                break;
+                            case 0x80:
+                                OPERAND_BYTES[0] = 4;
+                                break;
+                        }
+                        flag_nop = 0;
+                    }
+                
                 if(num_operands > 0){
-                    __state_next = OPERAND;
+                    change_state(OPERAND);
                 } else {
-                    __state_next = OPCODE1;
+                    change_state(OPCODE);
                 }
                 break;
             case OPERAND:
+                printf("CASE --> OPERAND\n");
+                printf("num_operands = %d\n", num_operands);
                 if(num_operands > 0){
-                    num_operands--;
-                    if(num_operands == 0){
-                        __state_next = OPCODE1;
+                    //printf("%d - %d\n", op_bytes_index, OPERAND_BYTES[op_bytes_index]);
+                    OPERAND_BYTES[op_bytes_index]--;
+
+                    // Reduce operand count when operand bytes have been consumed
+                    if(OPERAND_BYTES[op_bytes_index] == 0){
+                        num_operands--;
+                        op_bytes_index++;
                     }
+
+                    if(num_operands == 0){
+                        change_state(OPCODE);
+                        op_bytes_index = 0;
+                        opcode_sz = 1;
+                    } else {
+                        if(groupnum == 1){
+                            
+                        }
+                        
+                    }
+
+                        
                 } else {
-                    __state_next = OPCODE1;
+                    change_state(OPCODE);
+                    op_bytes_index = 0;
+                    opcode_sz = 1;
                     // Reset flags
-                    group1 = 0;
+                    groupnum = 0;
                 }
 
+                
                 break;
         }
 
         // Assign the new state
+        
         __state = __state_next;
 
 
@@ -825,9 +984,23 @@ void add_instr(const char *name){
 }
 
 void add_prefix(char *prefix){
-    printf("\tprefix = %s\n", prefix);
+    printf("\t\t\tprefix = %s\n", prefix);
 }
 
 void usage(){
     printf("Usage: reverse -i, --input <file>\n");
+}
+
+void change_state(int index){
+    __state_next = index;
+    printf("\t\t\t\tnext state --> %s\n", STATE_NEXT_STRINGS[index]);
+}
+
+void print_instruction(char *instr_name, uint8_t *prefix_rex){
+    printf("\t\t\t%s", instr_name);
+    if(*prefix_rex > 0){
+        printf("(REX: %s)", REX_STRS[*prefix_rex]);
+        *prefix_rex = 0;
+    }
+    printf("\n");
 }
