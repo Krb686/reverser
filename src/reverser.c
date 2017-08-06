@@ -684,6 +684,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
     int __state       = OPCODE;
     
     int flag_nop = 0;
+    int flag_skip_opcode = 0;
     int num_operands = 0;
     int op_bytes_index = 0;
     int displacement = 0;
@@ -700,7 +701,8 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0x0f:
                     if(opcode_sz == 1){
-                        opcode_sz = 2; 
+                        opcode_sz++; 
+                        flag_skip_opcode = 1;
                     }
                     break;
                 case 0x1f:
@@ -808,18 +810,23 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 }
 
-                instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
+                // Skip assigning an instruction for the current opcode on special bytes (opcode size increase)
+                if(!flag_skip_opcode){
+                    instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
 
-                if(instr_name != NULL && strcmp(instr_name, "") == 0){
-                    //printf("instr not implemented!\n");
-                } else {
-                    if(strcmp(instr_name, "-") == 0){
-                        // instruction can't be determined yet
+                    if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        //printf("instr not implemented!\n");
+                        printf("unaccounted byte - exiting\n");
+                        return;
                     } else {
-                        print_instruction(instr_name, &prefix_rex);
+                        if(strcmp(instr_name, "-") == 0){
+                            // instruction can't be determined yet
+                        } else {
+                            print_instruction(instr_name, &prefix_rex);
+                        }
+                        
+                        change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
                     }
-                    
-                    change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
                 }
 
                 break;
@@ -952,78 +959,10 @@ void decode_instructions(unsigned char *byte, int numbytes){
         }
 
         // Assign the new state
-        
         __state = __state_next;
-
-
-            
-
-            //}
-            
-
-            /*
-            // Group 1 instructions are defined by the 1st byte + bits 3-5 of byte 2
-            if(group1 == 1){
-                if(modrm == 1){
-                    
-
-                    printf("\t\tmodefield = %" PRIu8 "\n", modefield);
-                    printf("\t\tregfield = %" PRIu8 "\n", regfield);
-                    printf("\t\trmfield = %" PRIu8 "\n", rmfield);
-
-
-                    switch(regfield){
-                        case 0x00:
-                            //mark_instr("add");
-                            break;
-                        case 0x01:
-                           // mark_instr("or");
-                            break;
-                        case 0x02:
-                            //mark_instr("adc");
-                            break;
-                        case 0x03:
-                            //mark_instr("sbb");
-                            break;
-                        case 0x04:
-                            //mark_instr("and");
-                            break;
-                        case 0x05:
-                            //mark_instr("sub");
-                        case 0x06:
-                            //mark_instr("xor");
-                            break;
-                        case 0x07:
-                            //mark_instr("cmp");
-                            break;
-                    }
-                    modrm = 0;
-
-                    
-                }
-                group1 = 0;
-                
-            } else {
-                
-                printf("\t\targ byte = 0x%" PRIx8 "\n", (unsigned char)*byte);
-                printf("\t\targbytes = %d\n", argbytes);
-                if(argbytes > 0){
-                    argbytes--;
-
-                    if(argbytes == 0){
-                        __opfound = 0;
-                        opsize_override = 0;
-                        nopm = 0;
-                        add_instr(instr_name);
-                    }
-                } else {
-                    __opfound = 0;
-                }
-            }
-            */
-
         byte++;
         __bytenum++;
+        flag_skip_opcode = 0;
     }
 }
 
