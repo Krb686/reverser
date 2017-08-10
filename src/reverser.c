@@ -15,7 +15,8 @@
 #define EXIT_BAD_ARGS 1
 
 #define OPCODE       1
-#define DISPLACEMENT 2
+#define NOP          2
+#define DISPLACEMENT 3
 #define MODRM        4
 #define SIB          5
 #define OPERAND      6
@@ -139,20 +140,20 @@ const char *INSTR_NAMES[3][256] =
     {
         "", "add", "", "", "", "", "", "", "", "", "", "", "", "", "", "-",    \
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "pop",  \
-        "", "", "", "", "", "", "", "", "", "", "", "", "", "sub", "", "",      \
+        "", "", "", "", "", "", "", "", "sub", "sub", "sub", "sub", "sub", "sub", "", "",      \
         "", "xor", "", "", "", "", "", "", "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "", "-", "-", "", "", "", "", "", "",        \
-        "push", "", "", "", "push", "push", "", "", "", "", "", "", "", "pop", "pop", "",         \
+        "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX", "REX",        \
+        "push", "", "", "push", "push", "push", "push", "push", "", "", "", "", "", "pop", "pop", "",         \
         "", "", "", "", "", "", "-", "", "", "", "", "", "", "", "", "",         \
         "", "", "", "", "je", "jne", "", "ja", "", "", "", "", "", "", "", "",         \
-        "-", "", "", "-", "", "test", "", "", "", "mov", "", "", "", "", "", "",         \
+        "-", "", "", "-", "", "test", "", "", "", "mov", "", "", "", "lea", "", "",         \
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
         "", "", "", "", "", "", "", "", "mov", "mov", "mov", "mov", "mov", "mov", "mov", "mov",         \
-        "", "-", "", "ret", "", "", "", "-", "", "", "", "", "", "", "", "",         \
+        "", "-", "", "ret", "", "", "-", "-", "", "", "", "", "", "", "", "",         \
         "", "-", "", "", "", "", "", "", "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "", "call", "", "", "", "", "", "", "",         \
-        "", "", "", "", "hlt", "", "", "", "", "", "", "", "", "", "", "-"
+        "", "", "", "", "", "", "", "", "call", "jmp", "", "", "", "", "", "",         \
+        "", "", "", "-", "hlt", "", "", "", "", "", "", "", "", "", "", "-"
     },
     {
         "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",    \
@@ -197,20 +198,20 @@ const int STATE_NEXT_MAP[3][256] =
     {
         9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, OPERAND, 9, 9, \
         9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, 9, 9, 9, 9, 9, \
-        OPCODE, 9, 9, 9, OPCODE, OPCODE, 9, 9, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, \
+        9, OPCODE, 9, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, 9, OPCODE, 9, 9, 9, \
+        OPCODE, 9, 9, OPCODE, OPCODE, OPCODE, OPCODE, OPCODE, 9, 9, 9, 9, 9, OPCODE, OPCODE, 9, \
         9, 9, 9, 9, 9, 9, OPCODE, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, OPERAND, OPERAND, 9, OPERAND, 9, 9, 9, 9, 9, 9, 9, 9, \
-        MODRM, 9, 9, MODRM, 9, MODRM, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
+        MODRM, 9, 9, MODRM, 9, MODRM, 9, 9, 9, MODRM, 9, 9, 9, MODRM, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, OPERAND, 9, 9, 9, 9, OPERAND, \
-        9, MODRM, 9, OPCODE, 9, 9, 9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, MODRM, 9, OPCODE, 9, 9, MODRM, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, \
         9, MODRM, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, OPERAND, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, OPCODE, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM 
+        9, 9, 9, 9, 9, 9, 9, 9, OPERAND, DISPLACEMENT, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, OPCODE, OPCODE, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, MODRM 
     },
     {
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
@@ -688,6 +689,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
     int num_operands = 0;
     int op_bytes_index = 0;
     int displacement = 0;
+    int nop_len = 0;
 
     // Loop over all bytes
     while(__bytenum < numbytes){
@@ -711,11 +713,17 @@ void decode_instructions(unsigned char *byte, int numbytes){
                        flag_nop = 1;
                    }
                    break;
+                case 0x29:
+                    num_operands = 0;
+                    break;
                 case 0x2d:
                     num_operands = 1;
                     OPERAND_BYTES[0] = 4;
                     break;
                 case 0x31: //xor
+                    break;
+                case 0x41:
+                    prefix_rex = *byte & 0xF;
                     break;
                 case 0x44:
                     break;
@@ -726,6 +734,9 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     prefix_rex = *byte & 0xF;
                     break;
                 case 0x49:
+                    prefix_rex = *byte & 0xF;
+                    break;
+                case 0x4c:
                     prefix_rex = *byte & 0xF;
                     break;
                 case 0x50:
@@ -789,6 +800,12 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 case 0xc3:
                     //mark_instr("retq");
                     break;
+                case 0xc6:
+                    //group 11, Eb, Ib
+                    groupnum = 11;
+                    num_operands = 1;
+                    OPERAND_BYTES[0] = 1;
+                    break;
                 case 0xc7:
                     groupnum = 11;
                     printf("\t\t\t\tgroup 11\n");
@@ -803,6 +820,10 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     num_operands = 1;
                     OPERAND_BYTES[0] = 4;
                     break;
+                case 0xe9:
+                    DISPLACEMENT_BYTES = 4;
+                    printf("num_ops = %d\n", num_operands);
+                    break;
                 case 0xf4:
                     break;
                 case 0xff:
@@ -812,6 +833,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
                 // Skip assigning an instruction for the current opcode on special bytes (opcode size increase)
                 if(!flag_skip_opcode){
+                    printf("opcode_sz = %d\n", opcode_sz);
                     instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
 
                     if(instr_name != NULL && strcmp(instr_name, "") == 0){
@@ -819,7 +841,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         printf("unaccounted byte - exiting\n");
                         return;
                     } else {
-                        if(strcmp(instr_name, "-") == 0){
+                        if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
                             // instruction can't be determined yet
                         } else {
                             print_instruction(instr_name, &prefix_rex);
@@ -831,28 +853,37 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
                 break;
             case DISPLACEMENT:
+                printf("DISPLACEMENT\n");
                 if(DISPLACEMENT_BYTES > 0){
                     DISPLACEMENT_BYTES--;
 
                     if(DISPLACEMENT_BYTES == 0){
-                        change_state(OPERAND);
+                        if(num_operands > 0){
+                            change_state(OPERAND);
+                            opcode_sz = 1;
+                        } else {
+                            change_state(OPCODE);
+                        }
                         displacement = 0;
                     }
                 }
                 break;
             case MODRM:
                 printf("MODRM\n");
-                if(groupnum > 0){
-                    modefield = (*byte >> 6) & 0x3;
-                    regfield = (*byte >> 3) & 0x7;
-                    rmfield = (*byte) & 0x7;
+                modefield = (*byte >> 6) & 0x3;
+                regfield = (*byte >> 3) & 0x7;
+                rmfield = (*byte) & 0x7;
 
-                    if(modefield == 0 && rmfield == 5){
-                        // modrm = 00xxx101
-                        //displacement 32 bit
-                        displacement = 1;
-                        DISPLACEMENT_BYTES = 4;
-                    }
+                if(modefield == 0 && rmfield == 5){
+                    // modrm = 00xxx101
+                    //displacement 32 bit
+                    displacement = 1;
+                    DISPLACEMENT_BYTES = 4;
+                }
+
+
+                if(groupnum > 0){
+                    
 
                     switch(groupnum){
 
@@ -902,6 +933,12 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
                 if(flag_nop){
                         switch(*byte){
+                            case 0x00:
+                                num_operands = 0;
+                                break;
+                            case 0x40:
+                                OPERAND_BYTES[0] = 1;
+                                break;
                             case 0x44:
                                 OPERAND_BYTES[0] = 2;
                                 break;
@@ -919,14 +956,25 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     change_state(OPERAND);
                 } else {
                     change_state(OPCODE);
+                    opcode_sz = 1;
+                }
+                break;
+            case NOP:
+                if(nop_len > 0){
+                    nop_len--;
+                    if(nop_len == 0){
+                        change_state(OPCODE);
+                    }
                 }
                 break;
             case OPERAND:
                 printf("CASE --> OPERAND\n");
                 printf("num_operands = %d\n", num_operands);
                 if(num_operands > 0){
-                    //printf("%d - %d\n", op_bytes_index, OPERAND_BYTES[op_bytes_index]);
-                    OPERAND_BYTES[op_bytes_index]--;
+
+                    if(OPERAND_BYTES[op_bytes_index] > 0){ 
+                        OPERAND_BYTES[op_bytes_index]--;
+                    }
 
                     // Reduce operand count when operand bytes have been consumed
                     if(OPERAND_BYTES[op_bytes_index] == 0){
@@ -958,11 +1006,12 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 break;
         }
 
-        // Assign the new state
-        __state = __state_next;
+        
         byte++;
         __bytenum++;
         flag_skip_opcode = 0;
+        // Assign the new state
+        __state = __state_next;
     }
 }
 
