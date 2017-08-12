@@ -32,6 +32,14 @@
   (byte & 0x02 ? '1' : '0'), \
   (byte & 0x01 ? '1' : '0')
 
+#define DEBUG
+
+#ifdef DEBUG
+  #define PRINTD printf
+#else
+  #define PRINTD(format, args...) ((void)0)
+#endif
+
 //TODO - objects to create
 //  - elf header
 //  - segment header table
@@ -68,10 +76,12 @@ void dump_sections(int);
 void decode_section(int);
 void print_bytes(char*, int);
 void decode_instructions(unsigned char*, int);
+char* decode_operand_abbrev(char*);
 void add_instr(const char*);
 void add_prefix(char*);
 void change_state(int);
-void print_instruction(char*, uint8_t*);
+void print_instruction(const char*, const char*, char*, uint8_t*);
+void reverse_str(char*);
 
 
 // Getopt variables
@@ -134,6 +144,11 @@ int __bytenum = 0;
 int __opfound = 0;
 
 int instr_count = 0;
+int __SELECT_PROC_MODE = 0; //32 or 64 bit mode
+int __SELECT_W_PRESENT = 0;
+int __SELECT_DATA_SIZE = 1; //16, 32, or 64 bit
+int __SELECT_W_VALUE = 0;
+int __SELECT_REG_VALUE = 0;
 
 const char *INSTR_NAMES[3][256] = 
 { 
@@ -251,6 +266,125 @@ const int STATE_NEXT_MAP[3][256] =
     }
 };
 
+const char *OPERAND_ENCODINGS[3][256] = {
+    {
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "rAX/r8, Iv", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+    },
+    {
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+    },
+    {
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
+        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+    }
+
+};
+
+
+//  32        | 64 bit mode
+//  w not present | w present
+//  w = 0 | w = 1
+//  16 | 32 | 64 bit data
+//  values
+
+const char *REG_ENCODING[2][2][2][3][8] = {
+                                              { // non-64 bit mode
+                                                  { //w field not present
+                                                      { // w = 0
+                                                          { "ax",  "cx",  "dx",  "bx",  "sp",  "bp",  "si",  "di"},
+                                                          { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" },
+                                                          { "",    "",    "",    "",    "",    "",    "",    "" }
+                                                      },
+                                                      { //w = 1
+                                                          { "", "", "", "", "", "", "", ""},
+                                                          { "", "", "", "", "", "", "", "" },
+                                                          { "", "", "", "", "", "", "", "" }
+                                                      }
+                                                  },
+                                                  { // w field present 
+                                                      { //w = 0
+                                                          { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" }, //16 bit data
+                                                          { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" }, //32 bit data
+                                                          { "",   "",   "",   "",   "",   "",   "",   ""   }  //invalid
+                                                      },
+                                                      { //w = 1
+                                                          { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di" }, //16 bit data
+                                                          { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" },
+                                                          { "", "", "", "", "", "", "", "" }
+                                                      }
+                                                  }
+                                              }, 
+                                              { // 64 bit mode 
+                                                  { // w field not present
+                                                      { // w = 0
+                                                          { "ax",  "cx",  "dx",  "bx",  "sp",  "bp",  "si",  "di"},
+                                                          { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" },
+                                                          { "rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi" }
+                                                      },
+                                                      { // w = 1
+                                                          { "", "", "", "", "", "", "", ""},
+                                                          { "", "", "", "", "", "", "", "" },
+                                                          { "", "", "", "", "", "", "", "" }
+                                                      }
+                                                  },
+                                                  { // w field present
+                                                      { // w = 0
+                                                          { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" },
+                                                          { "al", "cl", "dl", "bl", "ah", "ch", "dh", "bh" },
+                                                          { "", "", "", "", "", "", "", "" }
+                                                      },
+                                                      { // w = 1
+                                                          { "ax", "cx", "dx", "bx", "sp", "bp", "si", "di"},
+                                                          { "eax", "ecx", "edx", "ebx", "esp", "ebp", "esi", "edi" },
+                                                          { "", "", "", "", "", "", "", "" }
+                                                      }
+                                                  }
+                                              }
+                                          };
 
 
 const char *INSTR_NAMES_GROUP1[8] = { "add", "or", "adc", "sbb", "and", "sub", "xor", "cmp" };
@@ -296,6 +430,9 @@ int main(int argc, char* argv[]){
     }
 
     // Open the file
+    if(filename == NULL){
+        return 1;
+    }
     int fd = open(filename, O_RDONLY);
     if (fstat(fd, &fstatbuf) != 0){
         perror("Error:");
@@ -663,14 +800,16 @@ void print_bytes(char *byteptr, int n){
 
 void decode_instructions(unsigned char *byte, int numbytes){
     __bytenum = 0;
-    int argbytes = 0;
-    int modrm = 0;
+    char byte_str[3];
 
     uint8_t opcode_sz = 1;
 
-    unsigned char *i_start = byte;
-    int i_len = 0;
     const char *instr_name;
+    const char *op_src;
+    //char *op_dst;
+    char op_str[16];
+    //char *op_str = malloc(sizeof(char)*32);
+    op_str[0] = '\0';
 
     int groupnum = 0;
 
@@ -679,18 +818,19 @@ void decode_instructions(unsigned char *byte, int numbytes){
     uint8_t rmfield = 0;
 
     uint8_t prefix_rex = 0;
-    uint8_t prefix_oper = 0;
 
     // TODO - make this into more of a state machine
     int __state       = OPCODE;
     
-    int flag_nop = 0;
+    //int flag_nop = 0;
     int flag_skip_opcode = 0;
     int num_operands = 0;
     int op_bytes_index = 0;
     int flag_displacement = 0;
     int flag_sib = 0;
     int nop_len = 0;
+
+    const char *reg;
 
     // Loop over all bytes
     while(__bytenum < numbytes){
@@ -710,7 +850,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0x1f:
                    if(opcode_sz == 2){
-                       flag_nop = 1;
+                       //flag_nop = 1;
                    }
                    break;
                 case 0x29:
@@ -746,7 +886,6 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     //mark_instr("push");
                     break;
                 case 0x66:
-                    prefix_oper = 1;
                     break;
                 case 0x74:
                     num_operands = 1;
@@ -779,6 +918,10 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     OPERAND_BYTES[0] = 4;
                     break;
                 case 0xb8:
+                    // 1011wreg : imm
+                    __SELECT_W_PRESENT = 1;
+                    __SELECT_W_VALUE = (*byte >> 3) & 0x1;
+                    __SELECT_REG_VALUE = *byte & 0x7;
                     OPERAND_BYTES[0] = 4;
                     num_operands = 1;
                     break;
@@ -831,9 +974,21 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 }
 
+                // Determine the selected register
+                reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
+                op_src = reg;
+                if(strcmp(reg, "") == 0){
+                    printf("incorrect register decoding\n");
+                    return;
+                }
+                PRINTD ("\t\t\t\tmode = %d\n", __SELECT_PROC_MODE);
+                PRINTD ("\t\t\t\tw present = %d\n", __SELECT_W_PRESENT);
+                PRINTD ("\t\t\t\tw value = %d\n", __SELECT_W_VALUE);
+                PRINTD ("\t\t\t\tdata size = %d\n", __SELECT_DATA_SIZE);
+                PRINTD ("\t\t\t\treg = %s\n", reg);
+
                 // Skip assigning an instruction for the current opcode on special bytes (opcode size increase)
                 if(!flag_skip_opcode){
-                    printf("opcode_sz = %d\n", opcode_sz);
                     instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
 
                     if(instr_name != NULL && strcmp(instr_name, "") == 0){
@@ -844,7 +999,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
                             // instruction can't be determined yet
                         } else {
-                            print_instruction(instr_name, &prefix_rex);
+                            print_instruction(instr_name, op_src, "", &prefix_rex);
                         }
                         
                         change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
@@ -853,7 +1008,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
                 break;
             case DISPLACEMENT:
-                printf("DISPLACEMENT\n");
+                PRINTD ("CASE --> DISPLACEMENT\n");
                 if(DISPLACEMENT_BYTES > 0){
                     DISPLACEMENT_BYTES--;
 
@@ -869,13 +1024,13 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 }
                 break;
             case MODRM:
-                printf("MODRM\n");
+                PRINTD ("CASE --> MODRM\n");
                 modefield = (*byte >> 6) & 0x3;
                 regfield = (*byte >> 3) & 0x7;
                 rmfield = (*byte) & 0x7;
 
                 // displacement detection
-                if(modefield == 0 && rmfield == 5 || modefield == 1 || modefield == 2){
+                if( (modefield == 0 && rmfield == 5) || modefield == 1 || modefield == 2){
                     printf("found displacement\n");
                     flag_displacement = 1;
                     if(modefield == 0 || modefield == 2){
@@ -901,7 +1056,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             //printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, &prefix_rex);
+                            print_instruction(instr_name, "", "", &prefix_rex);
                         }
 
                         num_operands = 1;
@@ -912,7 +1067,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                          if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, &prefix_rex);
+                            print_instruction(instr_name, "", "", &prefix_rex);
                         }
                         groupnum = 0;
                         break;
@@ -921,7 +1076,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, &prefix_rex);
+                            print_instruction(instr_name, "", "", &prefix_rex);
                         }
                         groupnum = 0;
                         break;
@@ -931,7 +1086,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, &prefix_rex);
+                            print_instruction(instr_name, "", "", &prefix_rex);
                         }
 
                         num_operands = 1;
@@ -976,6 +1131,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 }
                 break;
             case NOP:
+                PRINTD ("CASE --> NOP\n");
                 if(nop_len > 0){
                     nop_len--;
                     if(nop_len == 0){
@@ -985,11 +1141,14 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 break;
             case OPERAND:
                 printf("CASE --> OPERAND\n");
-                printf("num_operands = %d\n", num_operands);
                 if(num_operands > 0){
 
                     if(OPERAND_BYTES[op_bytes_index] > 0){ 
                         OPERAND_BYTES[op_bytes_index]--;
+                        snprintf(byte_str, 3, "%02x", *byte);
+                        printf("byte_str = %s\n", byte_str);
+                        strcat(op_str, byte_str);
+                        printf("op_str = %s\n", op_str);
                     }
 
                     // Reduce operand count when operand bytes have been consumed
@@ -1002,14 +1161,15 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         change_state(OPCODE);
                         op_bytes_index = 0;
                         opcode_sz = 1;
+                        reverse_str(op_str);
+                        printf("op_str = %s\n", op_str);
+                        op_str[0] = '\0';
                     } else {
                         if(groupnum == 1){
                             
                         }
                         
                     }
-
-                        
                 } else {
                     change_state(OPCODE);
                     op_bytes_index = 0;
@@ -1021,7 +1181,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 
                 break;
             case SIB:
-
+                PRINTD ("CASE --> SIB\n");
                 if(flag_displacement){
                     change_state(DISPLACEMENT);
                 } else {
@@ -1064,12 +1224,43 @@ void change_state(int index){
     printf("\t\t\t\tnext state --> %s\n", STATE_NEXT_STRINGS[index]);
 }
 
-void print_instruction(char *instr_name, uint8_t *prefix_rex){
+void print_instruction(const char *instr_name, const char *op_src, char *op_dst, uint8_t *prefix_rex){
     instr_count++;                    
-    printf("\t\t\t%d) - %s", instr_count, instr_name);
+    printf("\t\t\t%d) - %s\t%%%s", instr_count, instr_name, op_src);
     if(*prefix_rex > 0){
         printf("(REX: %s)", REX_STRS[*prefix_rex]);
         *prefix_rex = 0;
     }
     printf("\n");
 }
+
+void reverse_str(char *str){
+    if(str == NULL || *str == NULL){
+        return;
+    }
+
+    char *start = str;
+    char *end = str + strlen(str) - 2;
+    char temp;
+    char temp2;
+    int len = strlen(str);
+    
+
+    while(end > start){
+        temp = *start;
+        temp2 = *(start+1);
+
+        *start = *end;
+        *(start+1) = *(end+1);
+
+        *end = temp;
+        *(end+1) = temp2;
+        
+        start = start + 2;
+        end = end - 2;;
+    }
+}
+
+//char* decode_operand_abbrev(char *operand_abbrev){
+    
+//}
