@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall
+CFLAGS=-g -Wall -O3 -Iinclude
 LDFLAGS=
 
 SRCDIR=src
@@ -10,13 +10,13 @@ BINDIR=bin
 SRCS=$(wildcard $(SRCDIR)/*.c)
 # Translate to object names in OBJDIR
 OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
-BINS=$(patsubst $(OBJDIR)/%.o, $(BINDIR)/$(basename %.o), $(OBJS))
+BIN=$(BINDIR)/reverser
 
 
 # Build all binaries
-all: $(BINS)
+all: $(BIN)
 
-$(BINS): $(BINDIR)/% : $(OBJDIR)/%.o
+$(BIN): $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 $(OBJS): $(OBJDIR)/%.o : $(SRCDIR)/%.c PRINT
