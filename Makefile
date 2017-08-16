@@ -8,18 +8,32 @@ BINDIR=bin
 
 # Collect all sources in SRCDIR
 SRCS=$(wildcard $(SRCDIR)/*.c)
+
+BIN_SRCS=$(filter-out $(SRCDIR)/test.c, $(SRCS))
 # Translate to object names in OBJDIR
-OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
+BIN_OBJS=$(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(BIN_SRCS))
 BIN=$(BINDIR)/reverser
+
+TEST_SRC=$(SRCDIR)/test.c
+TEST_OBJ=$(OBJDIR)/test.o
+TEST_BIN=$(BINDIR)/test
 
 
 # Build all binaries
-all: $(BIN)
+all: $(BIN) $(TEST_BIN)
 
-$(BIN): $(OBJS)
+$(BIN): $(BIN_OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-$(OBJS): $(OBJDIR)/%.o : $(SRCDIR)/%.c PRINT
+$(BIN_OBJS): $(OBJDIR)/%.o : $(SRCDIR)/%.c PRINT
+	$(CC) $(CFLAGS) $(LDFLAGS) -c $< -o $@
+
+test: $(TEST_BIN)
+
+$(TEST_BIN): $(TEST_OBJ)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+$(TEST_OBJ): $(TEST_SRC)
 	$(CC) $(CFLAGS) $(LDFLAGS) -c $< -o $@
 
 .PHONY: PRINT
