@@ -27,14 +27,6 @@
   (byte & 0x02 ? '1' : '0'), \
   (byte & 0x01 ? '1' : '0')
 
-#define DEBUG
-
-#ifdef DEBUG
-  #define PRINTD printf
-#else
-  #define PRINTD(format, args...) ((void)0)
-#endif
-
 // Getopt variables
 static int flag_verbose;
 struct option long_opts[] = {
@@ -43,27 +35,11 @@ struct option long_opts[] = {
     {0,0,0,0}
 };
 
-struct symbol {
-    char *name;
-    uint8_t version;
-    uint8_t type;
-};
-
-struct instr {
-    char *name;
-    char *bytes;
-    struct section *sptr;
-    uint64_t offset;
-};
-
-char *ehdr;
-
-
-// Begin
 int main(int argc, char* argv[]){
 
     int c;
     int opt_index;
+    char *start_addr;
     char *filename;
     struct stat fstatbuf;
 
@@ -88,12 +64,13 @@ int main(int argc, char* argv[]){
     if (fstat(fd, &fstatbuf) != 0){
         perror("Error:");
     }
+
     // Memory map the file
     off_t filesize;
     filesize = lseek(fd, 0, SEEK_END);
-    ehdr = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, fd, 0); 
-    printf("ehdr located at %p\n", ehdr);
-    decode_elf(ehdr);
+    start_addr = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, fd, 0); 
+    printf("start addr located at %p\n", start_addr);
+    decode_elf(start_addr);
 
     return 0;
 }

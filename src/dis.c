@@ -22,6 +22,19 @@ int __SELECT_DATA_SIZE = 1; //16, 32, or 64 bit
 int __SELECT_W_VALUE = 0;
 int __SELECT_REG_VALUE = 0;
 
+struct symbol {
+    char *name;
+    uint8_t version;
+    uint8_t type;
+};
+
+struct instr {
+    char *name;
+    char *bytes;
+    struct section *sptr;
+    uint64_t offset;
+};
+
 const char *INSTR_NAMES[3][256] =
 {
     {

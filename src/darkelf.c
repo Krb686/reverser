@@ -18,7 +18,7 @@ const char *SECTION_TYPES[12] = { "SHT_NULL", "SHT_PROGBITS", "SHT_SYMTAB", "SHT
 const char *SECTION_FLAG_TYPES[8] = { "---", "write", "alloc", "alloc+write", "exec", "exec+write", "exec+alloc", "exec+alloc+write" };
 
 
-Elf64_Ehdr *ehdr;
+
 
 struct section {
     uint8_t  num;
@@ -44,8 +44,10 @@ struct section {
 struct section** __sections;
 struct symbol**  __symbols;
 
-void decode_elf(char *start_ptr){
+void decode_elf(char *start_addr){
+
     char *incptr;
+    Elf64_Ehdr *ehdr = start_addr;
     Elf64_Phdr *phdr_array;
     Elf64_Shdr *shdr_array;
 
@@ -66,7 +68,7 @@ void decode_elf(char *start_ptr){
     __sections = malloc(sizeof(struct section*) * ehdr->e_shnum);
 
     // Create the section structs
-    create_sections(shdr_array, ehdr->e_shnum);
+    create_sections(ehdr, shdr_array, ehdr->e_shnum);
 
     // Dump contents of the section structs
     dump_sections(ehdr->e_shnum);
@@ -128,7 +130,7 @@ void dump_phdr(Elf64_Phdr *phdr, int num_entries){
     }
 }
 
-void create_sections(Elf64_Shdr *shdr, int num_entries){
+void create_sections(Elf64_Ehdr *ehdr, Elf64_Shdr *shdr, int num_entries){
     // Get the string table entry
     // It is the section header table's address + (e_shstrndx * size of an entry)
     char *incptr = (char*)shdr;
