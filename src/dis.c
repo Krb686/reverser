@@ -152,62 +152,61 @@ const int STATE_NEXT_MAP[3][256] =
     }
 };
 
-const char *OPERAND_ENCODINGS[3][256] = {
+const int OPERAND_FORMATS[3][256] = {
     {
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "rAX/r8, Iv", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, OP_FMT_IR, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
     },
     {
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
     },
     {
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",    \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",      \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",        \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", "",         \
-        "", "", "", "", "", "", "", "",     "", "", "", "", "", "", "", ""
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
     }
-
 };
 
 //  32        | 64 bit mode
@@ -281,13 +280,16 @@ const char *INSTR_NAMES_GROUP11[8] = { "mov", "",   "",    "",    "",    "",    
 const char *REX_STRS[16] = { "----", "---B", "--X-", "--XB", "-R--", "-R-B", "-RX-", "-RXB", "W---", "W--B", "W-X-", "W-XB", "WR--", "WR-B", "WRX-", "WRXB", };
 
 
-int OPERAND_BYTES[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
+
 int DISPLACEMENT_BYTES = 0;
 const char *STATE_NEXT_STRINGS[7] = { "", "OPCODE", "", "", "MODRM", "SIB", "OPERAND" };
 
 int __state_next  = OPCODE;
 
 void decode_instructions(unsigned char *byte, int numbytes){
+
+    int OPERAND_BYTES[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
+
     __bytenum = 0;
     char byte_str[3];
 
@@ -295,6 +297,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
     const char *instr_name;
     const char *op_src;
+    const char *op_dst;
     //char *op_dst;
     char op_str[16];
     //char *op_str = malloc(sizeof(char)*32);
@@ -318,6 +321,8 @@ void decode_instructions(unsigned char *byte, int numbytes){
     int flag_displacement = 0;
     int flag_sib = 0;
     int nop_len = 0;
+    int opcode_reg = 0;
+    int operand_format = 0;
 
     const char *reg;
 
@@ -408,6 +413,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0xb8:
                     // 1011wreg : imm
+                    opcode_reg = 1;
                     __SELECT_W_PRESENT = 1;
                     __SELECT_W_VALUE = (*byte >> 3) & 0x1;
                     __SELECT_REG_VALUE = *byte & 0x7;
@@ -464,8 +470,13 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 }
 
                 // Determine the selected register
-                reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
-                op_src = reg;
+                if(opcode_reg){
+                    reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
+                    op_dst = reg;
+                }
+
+                operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
+
                 if(strcmp(reg, "") == 0){
                     printf("incorrect register decoding\n");
                     return;
@@ -485,11 +496,11 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         printf("unaccounted byte - exiting\n");
                         return;
                     } else {
-                        if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
+                        //if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
                             // instruction can't be determined yet
-                        } else {
-                            print_instruction(instr_name, op_src, "", &prefix_rex);
-                        }
+                        //} else {
+                        //    print_instruction(instr_name, op_src, "", &prefix_rex);
+                        //}
 
                         change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
                     }
@@ -505,6 +516,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(num_operands > 0){
                             change_state(OPERAND);
                         } else {
+                            print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                             change_state(OPCODE);
                             opcode_sz = 1;
                         }
@@ -545,7 +557,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             //printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, "", "", &prefix_rex);
+                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
                         }
 
                         num_operands = 1;
@@ -556,7 +568,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                          if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, "", "", &prefix_rex);
+                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
                         }
                         groupnum = 0;
                         break;
@@ -565,7 +577,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, "", "", &prefix_rex);
+                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
                         }
                         groupnum = 0;
                         break;
@@ -575,7 +587,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(instr_name, "", "", &prefix_rex);
+                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
                         }
 
                         num_operands = 1;
@@ -613,6 +625,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 } else if(num_operands > 0){
                     change_state(OPERAND);
                 } else {
+                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                     change_state(OPCODE);
                     opcode_sz = 1;
                 }
@@ -622,6 +635,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 if(nop_len > 0){
                     nop_len--;
                     if(nop_len == 0){
+                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                         change_state(OPCODE);
                     }
                 }
@@ -636,15 +650,15 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         printf("byte_str = %s\n", byte_str);
                         strcat(op_str, byte_str);
                         printf("op_str = %s\n", op_str);
-                    }
-
-                    // Reduce operand count when operand bytes have been consumed
-                    if(OPERAND_BYTES[op_bytes_index] == 0){
+                    } else if(OPERAND_BYTES[op_bytes_index] == 0){ // Reduce operand count when operand bytes have been consumed
                         num_operands--;
                         op_bytes_index++;
                     }
+                    
 
                     if(num_operands == 0){
+                        
+                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                         change_state(OPCODE);
                         op_bytes_index = 0;
                         opcode_sz = 1;
@@ -658,6 +672,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
                     }
                 } else {
+                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                     change_state(OPCODE);
                     op_bytes_index = 0;
                     opcode_sz = 1;
@@ -672,6 +687,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 if(flag_displacement){
                     change_state(DISPLACEMENT);
                 } else {
+                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                     change_state(OPCODE);
                     opcode_sz = 1;
                 }

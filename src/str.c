@@ -4,7 +4,7 @@
 #include "str.h"
 
 void reverse_str(char *str){
-    if(str == NULL || *str == NULL){
+    if(str == NULL){
         return;
     }
 

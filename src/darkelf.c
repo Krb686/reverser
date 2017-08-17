@@ -47,7 +47,7 @@ struct symbol**  __symbols;
 void decode_elf(char *start_addr){
 
     char *incptr;
-    Elf64_Ehdr *ehdr = start_addr;
+    Elf64_Ehdr *ehdr = (Elf64_Ehdr*)start_addr;
     Elf64_Phdr *phdr_array;
     Elf64_Shdr *shdr_array;
 

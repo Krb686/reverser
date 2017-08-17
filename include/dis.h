@@ -8,6 +8,14 @@
 #define SIB          5
 #define OPERAND      6
 
+
+#define OP_FMT_RR	0
+#define OP_FMT_IR	1
+#define OP_FMT_R	2
+#define OP_FMT_A	3
+#define OP_FMT_N	4
+
+
 void decode_instructions(unsigned char*, int);
 void change_state(int);
 #endif

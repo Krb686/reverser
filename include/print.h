@@ -11,5 +11,5 @@
 
 #include "inttypes.h"
 void print_bytes(char*, int);
-void print_instruction(const char*, const char*, char*, uint8_t*);
+void print_instruction(const int, const char*, const char*, const char*, uint8_t*);
 #endif
