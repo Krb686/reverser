@@ -8,6 +8,22 @@
 #include "str.h"
 
 
+#define REG0 "AL/AX/EAX/MM0/XMM0"
+#define REG1 "CL/CX/ECX/MM1/XMM1"
+#define REG2 "DL/DX/EDX/MM2/XMM2"
+#define REG3 "BL/BX/EBX/MM3/XMM3"
+#define REG4 "AH/SP/ESP/MM4/XMM4"
+#define REG5 "CH/BP/EBP/MM5/XMM5"
+#define REG6 "DH/SI/ESI/MM6/XMM6"
+#define REG7 "BH/DI/EDI/MM7/XMM7"
+
+
+#define OP1_32_0 "[EAX]",        "[ECX]",        "[EDX]",        "[EBX]",        "SIB",        "disp32",       "[ESI]",        "[EDI]"
+#define OP1_32_1 "[EAX]+disp8",  "[ECX]+disp8",  "[EDX]+disp8",  "[EBX]+disp8",  "SIB+disp8",  "[EBP]+disp8",  "[ESI]+disp8",  "[EDI]+disp8"
+#define OP1_32_2 "[EAX]+disp32", "[ECX]+disp32", "[EDX]+disp32", "[EBX]+disp32", "SIB+disp32", "[EBP]+disp32", "[ESI]+disp32", "[EDI]+disp32"
+#define OP1_32_3 REG0,           REG1,           REG2,           REG3,           REG4,         REG5,           REG6,           REG7
+
+
 //printf("(REX: %s)", REX_STRS[*prefix_rex]);
 //
 
@@ -154,22 +170,22 @@ const int STATE_NEXT_MAP[3][256] =
 
 const int OPERAND_FORMATS[3][256] = {
     {
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, OP_FMT_IR, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, OP_FMT_RR, 9, 9, 9, 9    , 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, OP_FMT_R, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, OP_FMT_R, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, OP_FMT_RR, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     OP_FMT_IR, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, OP_FMT_N, 9, 9,    9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9
     },
     {
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
@@ -208,6 +224,24 @@ const int OPERAND_FORMATS[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9
     }
 };
+
+
+//REG0 REG1 REG2 REG3 REG4 REG5 REG6 REG7
+const char *OP2REGS[8] = { REG0, REG1, REG2, REG3, REG4, REG5, REG6, REG7 };
+
+// 32-bit Addressing Forms with the ModR/M Byte
+// index = [mod][rm]
+const char *OP1EADDR[4][8] = 
+{
+    { OP1_32_0 },
+    { OP1_32_1 },
+    { OP1_32_2 },
+    { OP1_32_3 }
+};
+
+const char *OP2EADDR[8] = { REG0, REG1, REG2, REG3, REG4, REG5, REG6, REG7 };
+
+
 
 //  32        | 64 bit mode
 //  //  w not present | w present
@@ -288,7 +322,7 @@ int __state_next  = OPCODE;
 
 void decode_instructions(unsigned char *byte, int numbytes){
 
-    int OPERAND_BYTES[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
+    int OPERAND_LENS[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
 
     __bytenum = 0;
     char byte_str[3];
@@ -298,9 +332,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
     const char *instr_name;
     const char *op_src;
     const char *op_dst;
-    //char *op_dst;
     char op_str[16];
-    //char *op_str = malloc(sizeof(char)*32);
     op_str[0] = '\0';
 
     int groupnum = 0;
@@ -334,7 +366,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 switch(*byte){
                 case 0x01:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x0f:
                     if(opcode_sz == 1){
@@ -352,9 +384,10 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0x2d:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     break;
                 case 0x31: //xor
+                    opcode_reg = 1;
                     break;
                 case 0x41:
                     prefix_rex = *byte & 0xF;
@@ -383,25 +416,25 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0x74:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x75:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x77:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x80:
                     groupnum = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x83:
                     printf("\t\t\t\tgroup 1\n");
                     groupnum = 1;
                     // Ev, Ib (1 modrm byte, 1 imm byte)
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0x85:
                     break;
@@ -409,7 +442,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0xba:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     break;
                 case 0xb8:
                     // 1011wreg : imm
@@ -417,12 +450,12 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     __SELECT_W_PRESENT = 1;
                     __SELECT_W_VALUE = (*byte >> 3) & 0x1;
                     __SELECT_REG_VALUE = *byte & 0x7;
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     num_operands = 1;
                     break;
                 case 0xbf:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     break;
                 case 0x5d:
                     //mark_instr("pop");
@@ -433,7 +466,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 case 0xc1:
                     groupnum = 2;
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0xc3:
                     //mark_instr("retq");
@@ -442,13 +475,13 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     //group 11, Eb, Ib
                     groupnum = 11;
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 1;
+                    OPERAND_LENS[0] = 1;
                     break;
                 case 0xc7:
                     groupnum = 11;
                     printf("\t\t\t\tgroup 11\n");
                     // Ev, Iz (1 modrm byte, 1 immediate word (16 bit operand size) / double word (32 or 64 bit operand size)
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     break;
                 case 0xd1:
                     groupnum = 2;
@@ -456,7 +489,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     break;
                 case 0xe8:
                     num_operands = 1;
-                    OPERAND_BYTES[0] = 4;
+                    OPERAND_LENS[0] = 4;
                     break;
                 case 0xe9:
                     DISPLACEMENT_BYTES = 4;
@@ -475,7 +508,7 @@ void decode_instructions(unsigned char *byte, int numbytes){
                     op_dst = reg;
                 }
 
-                operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
+                
 
                 if(strcmp(reg, "") == 0){
                     printf("incorrect register decoding\n");
@@ -496,13 +529,19 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         printf("unaccounted byte - exiting\n");
                         return;
                     } else {
-                        //if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
+                        if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
                             // instruction can't be determined yet
-                        //} else {
+                        } else {
                         //    print_instruction(instr_name, op_src, "", &prefix_rex);
                         //}
-
-                        change_state(STATE_NEXT_MAP[opcode_sz - 1][*byte]);
+                            operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
+                            int next_state = STATE_NEXT_MAP[opcode_sz - 1][*byte];
+                            if(num_operands == 0 && next_state == OPCODE){
+                                print_instruction(operand_format, instr_name, "", "", &prefix_rex);
+                            }
+                            change_state(next_state);
+                        }
+                        
                     }
                 }
 
@@ -530,6 +569,9 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 regfield = (*byte >> 3) & 0x7;
                 rmfield = (*byte) & 0x7;
 
+                op_src = OP1EADDR[modefield][rmfield];
+                op_dst = OP2EADDR[regfield];
+
                 // displacement detection
                 if( (modefield == 0 && rmfield == 5) || modefield == 1 || modefield == 2){
                     printf("found displacement\n");
@@ -548,8 +590,6 @@ void decode_instructions(unsigned char *byte, int numbytes){
 
 
                 if(groupnum > 0){
-
-
                     switch(groupnum){
 
                     case 1:
@@ -595,6 +635,10 @@ void decode_instructions(unsigned char *byte, int numbytes){
                         break;
                     }
                 }
+
+                //if(modfield == 3){
+                    //
+                //}
 
                 /*
                 if(flag_nop){
@@ -644,26 +688,29 @@ void decode_instructions(unsigned char *byte, int numbytes){
                 printf("CASE --> OPERAND\n");
                 if(num_operands > 0){
 
-                    if(OPERAND_BYTES[op_bytes_index] > 0){
-                        OPERAND_BYTES[op_bytes_index]--;
+                    if(OPERAND_LENS[op_bytes_index] > 0){
+                        OPERAND_LENS[op_bytes_index]--;
                         snprintf(byte_str, 3, "%02x", *byte);
                         printf("byte_str = %s\n", byte_str);
                         strcat(op_str, byte_str);
                         printf("op_str = %s\n", op_str);
-                    } else if(OPERAND_BYTES[op_bytes_index] == 0){ // Reduce operand count when operand bytes have been consumed
+                    } 
+
+                    if(OPERAND_LENS[op_bytes_index] == 0){ // Reduce operand count when operand bytes have been consumed
                         num_operands--;
                         op_bytes_index++;
                     }
                     
 
                     if(num_operands == 0){
-                        
-                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                        change_state(OPCODE);
                         op_bytes_index = 0;
                         opcode_sz = 1;
                         reverse_str(op_str);
+                        trim_leading(op_str, '0');
                         printf("op_str = %s\n", op_str);
+                        op_src = op_str;
+                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
+                        change_state(OPCODE);
                         op_str[0] = '\0';
                     } else {
                         if(groupnum == 1){

@@ -27,3 +27,27 @@ void reverse_str(char *str){
         end = end - 2;;
     }
 }
+
+char *trim_leading(char *str, char trimchar){
+    char *start = str;
+    char *copy = str;
+
+    // safety check
+    if(str == NULL || str[0] == '\0'){
+        return str;
+    }
+
+    // move the start ptr beyond the set of trimchars
+    while(start[0] == trimchar){
+        start++;
+    }
+
+    // Copy the string left
+    while(*start){
+        *copy++ = *start++;
+    }
+    *copy = '\0';
+
+
+    return str;
+}

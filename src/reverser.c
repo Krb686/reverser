@@ -38,9 +38,10 @@ struct option long_opts[] = {
 int main(int argc, char* argv[]){
 
     int c;
+    int fd;
     int opt_index;
     char *start_addr;
-    char *filename;
+    char *filename = "";
     struct stat fstatbuf;
 
     // Handle arguments
@@ -51,16 +52,20 @@ int main(int argc, char* argv[]){
     while ((c = getopt_long(argc, argv, "i:v", long_opts, &opt_index)) != -1){
         switch(c){
             case 'i':
+                filename = malloc(strlen(optarg)+1);
                 filename = strdup(optarg);
                 printf("filename = %s\n", filename);
         }
     }
 
     // Open the file
-    if(filename == NULL){
+    if(!filename){
         return 1;
+    } else {
+        fd = open(filename, O_RDONLY);
     }
-    int fd = open(filename, O_RDONLY);
+
+
     if (fstat(fd, &fstatbuf) != 0){
         perror("Error:");
     }
