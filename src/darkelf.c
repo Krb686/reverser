@@ -71,12 +71,14 @@ void decode_elf(char *start_addr){
     create_sections(ehdr, shdr_array, ehdr->e_shnum);
 
     // Dump contents of the section structs
-    dump_sections(ehdr->e_shnum);
+    dump_sections(ehdr);
 }
 
 
 void dump_ehdr(Elf64_Ehdr *ehdr){
     printf("======== ELF HEADER ========\n");
+
+    // ELF identification data
     printf("\te_ident:\n");
     int i;
     for(i=0;i<sizeof(ehdr->e_ident);++i){
@@ -202,10 +204,11 @@ void create_sections(Elf64_Ehdr *ehdr, Elf64_Shdr *shdr, int num_entries){
 }
 
 
-void dump_sections(int num_entries){
+void dump_sections(Elf64_Ehdr *ehdr){
     printf("======== SECTION HEADER TABLE ========\n");
 
     int i;
+    int num_entries = ehdr->e_shnum;
     printf("sizeof(__sections) = %" PRIu64 "\n", sizeof(__sections));
     for(i=0;i<num_entries;i++){
 
@@ -263,13 +266,13 @@ void dump_sections(int num_entries){
         */
 
 
-        decode_section(s->num);
+        decode_section(ehdr, s->num);
     }
 
 }
 
 
-void decode_section(int s_num){
+void decode_section(Elf64_Ehdr *ehdr, int s_num){
     printf("\tdecoding section #%d\n", s_num);
 
     struct section *s = __sections[s_num];
@@ -395,7 +398,7 @@ void decode_section(int s_num){
             printf("\t\tinterpreter = %s\n", s->bytes);
         } else if(strcmp(s->name, ".text") == 0){
             printf("\t\tdecoding instructions\n");
-            decode_instructions(s->bytes, s->size);
+            decode_instructions(s->bytes, s->size, ehdr->e_ident[4]);
         }
     }
 }

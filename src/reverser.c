@@ -75,6 +75,8 @@ int main(int argc, char* argv[]){
     filesize = lseek(fd, 0, SEEK_END);
     start_addr = mmap(NULL, filesize, PROT_READ, MAP_PRIVATE, fd, 0); 
     printf("start addr located at %p\n", start_addr);
+
+    // Begin decoding
     decode_elf(start_addr);
 
     return 0;

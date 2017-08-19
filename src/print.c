@@ -24,7 +24,7 @@ void print_instruction(const int format, const char *instr_name, const char *op_
         printf("\t\t\t%d) %s\t$0x%s,%%%s", ++instr_number, instr_name, op_src, op_dst);
         break;
     case OP_FMT_R:
-        printf("\t\t\t%d) %s\t%%%s", ++instr_number, instr_name, op_src, op_dst);
+        printf("\t\t\t%d) %s\t%%%s", ++instr_number, instr_name, op_src);
         break;
     case OP_FMT_A:
         break;
