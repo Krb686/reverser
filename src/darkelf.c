@@ -17,9 +17,7 @@ const char *SEGMENT_FLAG_TYPES[8] = { "---", "--X", "-W-", "-WX", "R--", "R-X", 
 const char *SECTION_TYPES[12] = { "SHT_NULL", "SHT_PROGBITS", "SHT_SYMTAB", "SHT_STRTAB", "SHT_RELA", "SHT_HASH", "SHT_DYNAMIC", "SHT_NOTE", "SHT_NOBITS", "SHT_REL", "SHT_SHLIB", "SHT_DYNSYM" };
 const char *SECTION_FLAG_TYPES[8] = { "---", "write", "alloc", "alloc+write", "exec", "exec+write", "exec+alloc", "exec+alloc+write" };
 
-
-
-
+// Section struct
 struct section {
     uint8_t  num;
     char     *name;
@@ -52,13 +50,13 @@ void decode_elf(char *start_addr){
     Elf64_Shdr *shdr_array;
 
 
-    dump_ehdr(ehdr);
+    //dump_ehdr(ehdr);
 
      // Locate and dump the program header table
     incptr = (char*)ehdr;
     phdr_array = (Elf64_Phdr*)(incptr + ehdr->e_phoff);
     printf("phdr_array located at %p\n", phdr_array);
-    dump_phdr(phdr_array, ehdr->e_phnum);
+    //dump_phdr(phdr_array, ehdr->e_phnum);
 
     // Locate and dump the section header table
     shdr_array = (Elf64_Shdr*)(incptr + ehdr->e_shoff);

@@ -18,22 +18,14 @@
 
 
 // Processor modes
-#define CPU_MODE_REAL		1
-#define CPU_MODE_PROT		2
-#define CPU_MODE_64_COMPAT	3
-#define CPU_MODE_64_NORMAL	4
-#define CPU_MODE_SMM		5
+#define CPU_MODE_REAL		0
+#define CPU_MODE_PROT		1
+#define CPU_MODE_64_COMPAT	2
+#define CPU_MODE_64_NORMAL	3
+#define CPU_MODE_SMM		4
 
-// Register options
-#define REG_OPTS_0 "AL", "AX", "EAX", "MM0", "XMM0"
-#define REG_OPTS_1 "CL", "CX", "ECX", "MM1", "XMM1"
-#define REG_OPTS_2 "DL", "DX", "EDX", "MM2", "XMM2"
-#define REG_OPTS_3 "BL", "BX", "EBX", "MM3", "XMM3"
-#define REG_OPTS_4 "AH", "SP", "ESP", "MM4", "XMM4"
-#define REG_OPTS_5 "CH", "BP", "EBP", "MM5", "XMM5"
-#define REG_OPTS_6 "DH", "SI", "ESI", "MM6", "XMM6"
-#define REG_OPTS_7 "BH", "DI", "EDI", "MM7", "XMM7"
 #define REG_OPTS_LINEUP "ROPT", "ROPT", "ROPT", "ROPT", "ROPT", "ROPT", "ROPT", "ROPT"
+
 
 
 
@@ -53,13 +45,50 @@
 
 
 // Address sizes
-#define ADDRESS_SZ_16	1
-#define ADDRESS_SZ_32	2
-#define ADDRESS_SZ_64	3
+#define ADDRESS_SZ_16	0
+#define ADDRESS_SZ_32	1
+#define ADDRESS_SZ_64	2
 
 // Operand sizes
 #define OPERAND_SZ_16	1
 #define OPERAND_SZ_32	2
+
+// Addressing Modes (Vol. 2D A-1)
+#define ADDR_MODE_A	0
+#define ADDR_MODE_B	1
+#define ADDR_MODE_C	2
+#define ADDR_MODE_D	3
+#define ADDR_MODE_E	4
+#define ADDR_MODE_F	5
+#define ADDR_MODE_G	6
+#define ADDR_MODE_H	7
+#define ADDR_MODE_I	8
+#define ADDR_MODE_J	9
+#define ADDR_MODE_K	10
+#define ADDR_MODE_L	11
+#define ADDR_MODE_M	12
+#define ADDR_MODE_N	13
+#define ADDR_MODE_O	14
+#define ADDR_MODE_P	15
+#define ADDR_MODE_Q	16
+#define ADDR_MODE_R	17
+#define ADDR_MODE_S	18
+#define ADDR_MODE_T	19
+#define ADDR_MODE_U	20
+#define ADDR_MODE_V	21
+#define ADDR_MODE_W	22
+#define ADDR_MODE_X	23
+#define ADDR_MODE_Y	24
+
+
+
+
+struct rextype {
+    uint8_t w;
+    uint8_t r;
+    uint8_t x;
+    uint8_t b;
+};
 
 
 void decode_instructions(unsigned char*, int, uint8_t);

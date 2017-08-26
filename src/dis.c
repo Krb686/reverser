@@ -2,6 +2,7 @@
 //  - make sure mapping indices can't go out of bounds
 //  - figure out a better way to do mappings, maybe with pointers, especially the EADDR_32_MODE3
 //  - rex.w promotion
+//  *working - operand address mode maps
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -12,12 +13,9 @@
 #include "print.h"
 #include "str.h"
 
-//REG0 REG1 REG2 REG3 REG4 REG5 REG6 REG7
-const char *OP2REGS[8] = { REG_OPTS_LINEUP };
-
 // 32-bit Addressing Forms with the ModR/M Byte
 // index = [mod][rm]
-const char *OP1EADDR[4][8] = 
+const char *OP1EADDR[4][16] = 
 {
     { EADDR_32_MODE0 },
     { EADDR_32_MODE1 },
@@ -25,21 +23,41 @@ const char *OP1EADDR[4][8] =
     { EADDR_32_MODE3 }
 };
 
+// In 16-bit addressing mode, the selected register can be either 8 or 16 bits wide
+// In 32-bit addressing mode, the selected register can be either 8 or 32 bits wide
+// In 64-bit addressing mode, the selected register can be either 16, 32, or 64 bits wide
+// The selected register is determined by the addressing mode, w-bit presence, and w-bit value
+// For all addressing modes, register selection options when the w-bit is not present are the same as when the w-bit is present and w=1
 
-const char *REG_OPTS_ARRAY[8][5] = { REG_OPTS_0, REG_OPTS_1, REG_OPTS_2, REG_OPTS_3, REG_OPTS_4, REG_OPTS_5, REG_OPTS_6, REG_OPTS_7 };
-const char *OP2EADDR[8][5]       = { REG_OPTS_0, REG_OPTS_1, REG_OPTS_2, REG_OPTS_3, REG_OPTS_4, REG_OPTS_5, REG_OPTS_6, REG_OPTS_7 };
-
-
+// 3 addressing modes
+// 2 w-bit values
+// 8 reg encodings
+const char *REG_OPTS_ARRAY[3][2][16] = {
+    {
+        { "AL", "CL", "DL", "BL", "AH", "CH", "DH", "BH", "", "", "", "", "", "", "", "" },
+        { "AX", "CX", "DX", "BX", "SP", "BP", "SI", "DI", "", "", "", "", "", "", "", ""  }
+    },
+    {
+        { "AL",  "CL",  "DL",  "BL",  "AH",  "CH",  "DH",  "BH", "", "", "", "", "", "", "", ""  },
+        { "EAX", "ECX", "EDX", "EBX", "ESP", "EBP", "ESI", "EDI", "", "", "", "", "", "", "", ""  } 
+    },
+    {
+        { "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"  },
+        { "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"  }
+    }
+};
+const char *REG_OPTS_ARRAY_64[8] = {"R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15" };
 
 // Default operand sizes for processor modes
 //                                      real           prot           64-compat      64-norm        smm
 const uint8_t DEFAULT_OPERAND_SZ[5] = { OPERAND_SZ_16, OPERAND_SZ_32, OPERAND_SZ_32, OPERAND_SZ_32, OPERAND_SZ_32 };
+const uint8_t DEFAULT_ADDRESS_SZ[5] = { ADDRESS_SZ_16, ADDRESS_SZ_32, ADDRESS_SZ_32, ADDRESS_SZ_32, ADDRESS_SZ_32 };
 const uint8_t OPERAND_SZ_BYTES[5] = { 2, 4, 4, 4, 4 };
-const uint8_t DEFAULT_ADDRESS_SZ[5] = { ADDRESS_SZ_16, ADDRESS_SZ_32, ADDRESS_SZ_32, ADDRESS_SZ_64, ADDRESS_SZ_32 };
+
+const uint8_t OPERAND_SRC_ADDR_MODE;
+const uint8_t OPERAND_DST_ADDR_MODE;
 
 //printf("(REX: %s)", REX_STRS[*prefix_rex]);
-//
-
 
 int __bytenum = 0;
 int __opfound = 0;
@@ -240,6 +258,8 @@ const int OPERAND_FORMATS[3][256] = {
     }
 };
 
+//const uint8_t OPERAND_ADDRESS_MODES = 
+
 
 
 
@@ -344,7 +364,12 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     // Set the default address size according to the processor mode.
     uint8_t default_addr_sz = DEFAULT_ADDRESS_SZ[cpumode];
 
-
+    struct rextype rex = {
+        .w = 0,
+        .r = 0,
+        .x = 0,
+        .b = 0
+    };
 
     int OPERAND_LENS[8] = { 0, 0, 0, 0, 0, 0, 0, 0};
 
@@ -353,7 +378,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
     uint8_t opcode_sz = 1;
 
-    
+    uint8_t w_bit = 1; 
 
     const char *instr_name;
     const char *op_src;
@@ -382,8 +407,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     int opcode_reg = 0;
     int operand_format = 0;
 
-
-    int rex_w = 0;
     const char *reg;
 
     // Loop over all bytes
@@ -419,20 +442,29 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     break;
                 case 0x41:
                     prefix_rex = *byte & 0xF;
+                    default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x44:
+                    default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x47:
                     prefix_rex = *byte & 0xF;
+                    default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x48:
                     prefix_rex = *byte & 0xF;
+                    default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x49:
                     prefix_rex = *byte & 0xF;
+                    default_addr_sz = ADDRESS_SZ_64;
+                    rex.w = 1;
+                    rex.b = 1;
+                    PRINTD ("set rex.b to 1\n");
                     break;
                 case 0x4c:
                     prefix_rex = *byte & 0xF;
+                    default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x50:
                     //mark_instr("push");
@@ -597,14 +629,36 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 regfield = (*byte >> 3) & 0x7;
                 rmfield = (*byte) & 0x7;
 
+                // Effectively increase the size of these offsets based on the prepended rex bits
+                if(rex.r){
+                    regfield = regfield+8;
+                } 
+                if(rex.b){
+                    rmfield = rmfield+8;
+                    PRINTD ("rex.b = 1\n");
+                }
+
                 // Assign the effective address 
                 // - if the effective address is a REG_OPT string,
                 //   we need to index into the correct REG_OPT array
-                op_src = OP1EADDR[modefield][rmfield];
-                if(strcmp(op_src, "ROPT") == 0){
-                    op_src = REG_OPTS_ARRAY[rmfield][default_addr_sz];
+                PRINTD ("about to assign operands\n");
+                PRINTD ("modefield = %d\n", modefield);
+                PRINTD ("regfield = %d\n", regfield);
+                PRINTD ("rmfield = %d\n", rmfield);
+                PRINTD ("default_addr_sz = %d\n", default_addr_sz);
+
+                if(modefield < 3){
+                    op_src = OP1EADDR[modefield][rmfield];
+                } else {
+                    op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
                 }
-                op_dst = OP2EADDR[regfield][default_addr_sz];
+                if(strcmp(op_src, "ROPT") == 0){
+                    op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                }
+
+
+                op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                PRINTD ("assigned op_src and op_dst\n");
 
                 // displacement detection
                 if( (modefield == 0 && rmfield == 5) || modefield == 1 || modefield == 2){
