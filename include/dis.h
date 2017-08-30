@@ -12,9 +12,10 @@
 // Operand format
 #define OP_FMT_RR	0
 #define OP_FMT_IR	1
-#define OP_FMT_R	2
-#define OP_FMT_A	3
-#define OP_FMT_N	4
+#define OP_FMT_Rs	2
+#define OP_FMT_Rd	3
+#define OP_FMT_A	4
+#define OP_FMT_N	5
 
 
 // Processor modes
@@ -84,6 +85,7 @@
 #define ADDR_MODE_REGCODE_2    26      //      -                       exact register (eXX    - AL/AX)
 #define ADDR_MODE_REGCODE_3    27      //      -                       exact register (rXX    - AL/AX/RAX)
 #define ADDR_MODE_REGCODE_4    28      //      -                       exact register (rxx/r# - AL/AX/RAX/r9)
+#define ADDR_MODE_NONE         99
 
 
 struct rextype {

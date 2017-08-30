@@ -208,8 +208,8 @@ const int OPERAND_FORMATS[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, OP_FMT_RR, 9, 9, 9, 9    , 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, OP_FMT_R, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, OP_FMT_R, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, OP_FMT_Rs, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, OP_FMT_Rd, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, OP_FMT_RR, 9, 9, 9, 9, 9, 9, \
@@ -264,12 +264,12 @@ const int ADDR_MODES_SRC[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, ADDR_MODE_G, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, ADDR_MODE_NONE, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, ADDR_MODE_G, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     ADDR_MODE_I, 9, 9, 9, 9, 9, 9, 9, \
@@ -321,12 +321,12 @@ const int ADDR_MODES_DST[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, ADDR_MODE_E, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, ADDR_MODE_REGCODE_4, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     9, ADDR_MODE_E, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     ADDR_MODE_REGCODE_4, 9, 9, 9, 9, 9, 9, 9, \
@@ -684,23 +684,33 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 
 
                 // Determine the selected register
+                // For 'implicit' register instructions, the lower 3 bits of the opcode specify which register
+                if(addr_mode_dst == ADDR_MODE_REGCODE_4){
+                    regfield = (*byte) & 0x7;
+                    // Check the operand width attribute
+                    PRINTD ("default_addr_sz = %d\n", default_addr_sz);
+                    PRINTD ("w_bit = %d\n", w_bit);
+                    PRINTD ("regfield = %d\n", regfield);
+                    op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                    PRINTD ("op_dst = %s\n", op_dst);
+                }
+                //
                 // TODO - this needs to take into account the addressing mode
-                if(opcode_reg){
-                    reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
-                    op_dst = reg;
-                }
+                //if(opcode_reg){
+                //    reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
+                //    op_dst = reg;
+                //}
 
-                
 
-                if(strcmp(reg, "") == 0){
-                    printf("incorrect register decoding\n");
-                    return;
-                }
-                PRINTD ("\t\t\t\tmode = %d\n", __SELECT_PROC_MODE);
-                PRINTD ("\t\t\t\tw present = %d\n", __SELECT_W_PRESENT);
-                PRINTD ("\t\t\t\tw value = %d\n", __SELECT_W_VALUE);
-                PRINTD ("\t\t\t\tdata size = %d\n", __SELECT_DATA_SIZE);
-                PRINTD ("\t\t\t\treg = %s\n", reg);
+                //if(strcmp(reg, "") == 0){
+                //    printf("incorrect register decoding\n");
+                //    return;
+                //}
+                //PRINTD ("\t\t\t\tmode = %d\n", __SELECT_PROC_MODE);
+                //PRINTD ("\t\t\t\tw present = %d\n", __SELECT_W_PRESENT);
+                //PRINTD ("\t\t\t\tw value = %d\n", __SELECT_W_VALUE);
+                //PRINTD ("\t\t\t\tdata size = %d\n", __SELECT_DATA_SIZE);
+                //PRINTD ("\t\t\t\treg = %s\n", reg);
 
                 // Skip assigning an instruction for the current opcode on special bytes (opcode size increase)
                 if(!flag_skip_opcode){
@@ -719,7 +729,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                             operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
                             int next_state = STATE_NEXT_MAP[opcode_sz - 1][*byte];
                             if(num_operands == 0 && next_state == OPCODE){
-                                print_instruction(operand_format, instr_name, "", "", &prefix_rex);
+                                print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
                             }
                             change_state(next_state);
                         }
@@ -771,15 +781,28 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 PRINTD ("regfield = %d\n", regfield);
                 PRINTD ("rmfield = %d\n", rmfield);
                 PRINTD ("default_addr_sz = %d\n", default_addr_sz);
+                PRINTD ("w_bit = %d\n", w_bit);
+                PRINTD ("rmfield = %d\n", rmfield);
+                PRINTD ("addr_mode_dst = %d\n", addr_mode_dst);
 
-                if(modefield < 3){
-                    op_src = OP1EADDR[modefield][rmfield];
-                } else {
+                // WORKING - addressing mode checks
+                if(addr_mode_src == ADDR_MODE_G){
                     op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
                 }
 
+                if(addr_mode_dst == ADDR_MODE_E){
+                    op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][rmfield];
+                    PRINTD ("after assignment, op_dst = %s\n", op_dst);
+                }
+
+                if(modefield < 3){
+                    op_src = OP1EADDR[modefield][rmfield];
+                } //else {
+                //    op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+               // }
+
                  // TODO - always checking rmfield isn't correct. It's dependent on operand format
-                 op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][rmfield];
+                 
 
                 // displacement detection
                 if( (modefield == 0 && rmfield == 5) || modefield == 1 || modefield == 2){
@@ -923,8 +946,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                         // For immediate operands
                         if(addr_mode_src == ADDR_MODE_I ){
                             op_src = op_str;
-                        } else if (addr_mode_dst == 0 ){
-
                         }
 
                         print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
