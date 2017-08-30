@@ -53,34 +53,37 @@
 #define OPERAND_SZ_16	1
 #define OPERAND_SZ_32	2
 
-// Addressing Modes (Vol. 2D A-1)
-#define ADDR_MODE_A	0
-#define ADDR_MODE_B	1
-#define ADDR_MODE_C	2
-#define ADDR_MODE_D	3
-#define ADDR_MODE_E	4
-#define ADDR_MODE_F	5
-#define ADDR_MODE_G	6
-#define ADDR_MODE_H	7
-#define ADDR_MODE_I	8
-#define ADDR_MODE_J	9
-#define ADDR_MODE_K	10
-#define ADDR_MODE_L	11
-#define ADDR_MODE_M	12
-#define ADDR_MODE_N	13
-#define ADDR_MODE_O	14
-#define ADDR_MODE_P	15
-#define ADDR_MODE_Q	16
-#define ADDR_MODE_R	17
-#define ADDR_MODE_S	18
-#define ADDR_MODE_T	19
-#define ADDR_MODE_U	20
-#define ADDR_MODE_V	21
-#define ADDR_MODE_W	22
-#define ADDR_MODE_X	23
-#define ADDR_MODE_Y	24
-
-
+// Addressing Modes (Vol. 2D A-1)      //      field                   // selects
+#define ADDR_MODE_A            0       //      direct address
+#define ADDR_MODE_B            1       //      VEX.vvvv                GPR
+#define ADDR_MODE_C            2       //      ModR/M reg              control register
+#define ADDR_MODE_D            3       //      ModR/M reg              debug register
+#define ADDR_MODE_E            4       //      ModR/M                  GPR/memory
+#define ADDR_MODE_F            5       //      -                       EFLAGS/RFLAGS
+#define ADDR_MODE_G            6       //      ModR/M reg              GPR
+#define ADDR_MODE_H            7       //      VEX.vvvv                XMM/YMM
+#define ADDR_MODE_I            8       //      -                       immediate
+#define ADDR_MODE_J            9       //      -                       relative offset
+#define ADDR_MODE_K            10      // ---- UNUSED -------------------------------------------
+#define ADDR_MODE_L            11      //      top 4 of 8-bit imm      XMM/YMM
+#define ADDR_MODE_M            12      //      ModR/M                  memory
+#define ADDR_MODE_N            13      //      ModR/M r/m              MMX (packed quad)
+#define ADDR_MODE_O            14      //      -                       offset (word/double word)
+#define ADDR_MODE_P            15      //      ModR/M reg              MMX (packed quad)
+#define ADDR_MODE_Q            16      //      ModR/M                  MMX/memory
+#define ADDR_MODE_R            17      //      ModR/M r/m              GPR
+#define ADDR_MODE_S            18      //      ModR/M reg              segment register
+#define ADDR_MODE_T            19      // ---- UNUSED ------------------------------------------
+#define ADDR_MODE_U            20      //      ModR/M r/m              XMM/YMM
+#define ADDR_MODE_V            21      //      ModR/M reg              XMM/YMM
+#define ADDR_MODE_W            22      //      ModR/M                  XMM/YMM/memory
+#define ADDR_MODE_X            23      //      DS:rSI                  memory
+#define ADDR_MODE_Y            24      //      ES:rDI                  memory
+// These are 'pseudomodes' defined to capture the possible register codes (A.2.3)
+#define ADDR_MODE_REGCODE_1    25      //      -                       exact register (AX)
+#define ADDR_MODE_REGCODE_2    26      //      -                       exact register (eXX    - AL/AX)
+#define ADDR_MODE_REGCODE_3    27      //      -                       exact register (rXX    - AL/AX/RAX)
+#define ADDR_MODE_REGCODE_4    28      //      -                       exact register (rxx/r# - AL/AX/RAX/r9)
 
 
 struct rextype {
