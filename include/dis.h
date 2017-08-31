@@ -95,7 +95,12 @@ struct rextype {
     uint8_t b;
 };
 
+struct state_core {
+    uint8_t __state;
+    uint8_t __state_next;
+    struct rextype rex;
+};
 
 void decode_instructions(unsigned char*, int, uint8_t);
-void change_state(int);
+void change_state(int, struct state_core*);
 #endif
