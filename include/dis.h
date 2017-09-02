@@ -98,6 +98,10 @@ struct rextype {
 struct state_core {
     uint8_t __state;
     uint8_t __state_next;
+    uint8_t operand_fmt;
+    const char *operand_src;
+    const char *operand_dst;
+    const char *instr_name;
     struct rextype rex;
 };
 

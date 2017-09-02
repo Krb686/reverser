@@ -58,8 +58,6 @@ const uint8_t OPERAND_SZ_BYTES[5] = { 2, 4, 4, 4, 4 };
 const uint8_t OPERAND_SRC_ADDR_MODE;
 const uint8_t OPERAND_DST_ADDR_MODE;
 
-//printf("(REX: %s)", REX_STRS[*prefix_rex]);
-
 int __bytenum = 0;
 int __opfound = 0;
 
@@ -218,7 +216,7 @@ const int OPERAND_FORMATS[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9,     OP_FMT_IR, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, OP_FMT_N, 9, 9,    9, OP_FMT_IR, 9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     OP_FMT_A, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9
     },
     {
@@ -458,9 +456,10 @@ const char *STATE_NEXT_STRINGS[7] = { "", "OPCODE", "", "", "MODRM", "SIB", "OPE
 void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
     // Core of the state machine
-    struct state_core __state_core = {
+    struct state_core sc = {
         .__state = OPCODE,
         .__state_next = OPCODE,
+        .operand_fmt = OP_FMT_RR,
         .rex = {
             .w = 0,
             .r = 0,
@@ -498,9 +497,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
     uint8_t w_bit = 1; 
 
-    const char *instr_name;
-    const char *op_src;
-    const char *op_dst;
     char op_str[16];
     op_str[0] = '\0';
 
@@ -510,8 +506,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     uint8_t regfield = 0;
     uint8_t rmfield = 0;
 
-    uint8_t prefix_rex = 0;
-
     //int flag_nop = 0;
     int flag_skip_opcode = 0;
     int num_operands = 0;
@@ -520,7 +514,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     int flag_sib = 0;
     int nop_len = 0;
     int opcode_reg = 0;
-    int operand_format = 0;
 
     const char *reg;
 
@@ -532,7 +525,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     // Loop over all bytes
     while(__bytenum < numbytes){
         printf("\t\t\t\tbyte = %x\n", *byte);
-        switch(__state_core.__state){
+        switch(sc.__state){
             case OPCODE:
                 switch(*byte){
                 case 0x01:
@@ -561,29 +554,24 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     opcode_reg = 1;
                     break;
                 case 0x41:
-                    prefix_rex = *byte & 0xF;
                     default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x44:
                     default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x47:
-                    prefix_rex = *byte & 0xF;
                     default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x48:
-                    prefix_rex = *byte & 0xF;
                     default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x49:
-                    prefix_rex = *byte & 0xF;
                     default_addr_sz = ADDRESS_SZ_64;
-                    __state_core.rex.w = 1;
-                    __state_core.rex.b = 1;
+                    sc.rex.w = 1;
+                    sc.rex.b = 1;
                     PRINTD ("set rex.b to 1\n");
                     break;
                 case 0x4c:
-                    prefix_rex = *byte & 0xF;
                     default_addr_sz = ADDRESS_SZ_64;
                     break;
                 case 0x50:
@@ -687,8 +675,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     PRINTD ("default_addr_sz = %d\n", default_addr_sz);
                     PRINTD ("w_bit = %d\n", w_bit);
                     PRINTD ("regfield = %d\n", regfield);
-                    op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
-                    PRINTD ("op_dst = %s\n", op_dst);
+                    sc.operand_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                    PRINTD ("sc.operand_dst = %s\n", sc.operand_dst);
                 } 
 
                 // Determine the selected register
@@ -699,14 +687,14 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     PRINTD ("default_addr_sz = %d\n", default_addr_sz);
                     PRINTD ("w_bit = %d\n", w_bit);
                     PRINTD ("regfield = %d\n", regfield);
-                    op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
-                    PRINTD ("op_dst = %s\n", op_dst);
+                    sc.operand_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                    PRINTD ("sc.operand_dst = %s\n", sc.operand_dst);
                 }
                 //
                 // TODO - this needs to take into account the addressing mode
                 //if(opcode_reg){
                 //    reg = REG_ENCODING[__SELECT_PROC_MODE][__SELECT_W_PRESENT][__SELECT_W_VALUE][__SELECT_DATA_SIZE][__SELECT_REG_VALUE];
-                //    op_dst = reg;
+                //    sc.operand_dst = reg;
                 //}
 
 
@@ -722,9 +710,9 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
                 // Skip assigning an instruction for the current opcode on special bytes (opcode size increase)
                 if(!flag_skip_opcode){
-                    instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
+                    sc.instr_name = INSTR_NAMES[opcode_sz - 1][*byte];
 
-                    if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                    if(sc.instr_name != NULL && strcmp(sc.instr_name, "") == 0){
                         //printf("instr not implemented!\n");
                         
                         printf("unaccounted byte %x - exiting\n", *byte);
@@ -732,21 +720,21 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     } else {
 
                         int next_state = STATE_NEXT_MAP[opcode_sz - 1][*byte];
-                        if(strcmp(instr_name, "REX") == 0 || strcmp(instr_name, "-") == 0){
+                        if(strcmp(sc.instr_name, "REX") == 0 || strcmp(sc.instr_name, "-") == 0){
                             // instruction can't be determined yet
                             PRINTD ("instruction not determined\n");
                             if(groupnum > 0){
-                                operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
-                                change_state(next_state, &__state_core);
+                                sc.operand_fmt = OPERAND_FORMATS[opcode_sz - 1][*byte];
+                                change_state(next_state, &sc);
                             }
                         } else {
                             PRINTD ("normal instruction\n");
-                            operand_format = OPERAND_FORMATS[opcode_sz - 1][*byte];
+                            sc.operand_fmt = OPERAND_FORMATS[opcode_sz - 1][*byte];
                             
                             if(num_operands == 0 && next_state == OPCODE){
-                                print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
+                                print_instruction(&sc);
                             }
-                            change_state(next_state, &__state_core);
+                            change_state(next_state, &sc);
                         }
                         
                     }
@@ -760,10 +748,10 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
                     if(DISPLACEMENT_BYTES == 0){
                         if(num_operands > 0){
-                            change_state(OPERAND, &__state_core);
+                            change_state(OPERAND, &sc);
                         } else {
-                            print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                            change_state(OPCODE, &__state_core);
+                            print_instruction(&sc);
+                            change_state(OPCODE, &sc);
                             opcode_sz = 1;
                         }
                         flag_displacement = 0;
@@ -777,13 +765,13 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 rmfield = (*byte) & 0x7;
 
                 // Effectively increase the size of these offsets based on the prepended rex bits
-                if(__state_core.rex.r){
+                if(sc.rex.r){
                     regfield = regfield+8;
                 } 
 
                 // If a ModRM byte is present, this modifies the r/m field.
                 // If the opcode encodes a register, this modifies that register field
-                if(__state_core.rex.b){
+                if(sc.rex.b){
                     rmfield = rmfield+8;
                     PRINTD ("rex.b = 1\n");
                 }
@@ -803,19 +791,19 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 // WORKING - addressing mode checks
                 switch(addr_mode_src) {
                     case ADDR_MODE_G:
-                        op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                        sc.operand_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
                         break;
                 }
 
                 if(addr_mode_dst == ADDR_MODE_E){
-                    op_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][rmfield];
-                    PRINTD ("after assignment, op_dst = %s\n", op_dst);
+                    sc.operand_dst = REG_OPTS_ARRAY[default_addr_sz][w_bit][rmfield];
+                    PRINTD ("after assignment, sc.operand_dst = %s\n", sc.operand_dst);
                 }
 
                 if(modefield < 3){
-                    op_src = OP1EADDR[modefield][rmfield];
+                    sc.operand_src = OP1EADDR[modefield][rmfield];
                 } //else {
-                //    op_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
+                //    sc.operand_src = REG_OPTS_ARRAY[default_addr_sz][w_bit][regfield];
                // }
 
                  // TODO - always checking rmfield isn't correct. It's dependent on operand format
@@ -842,30 +830,30 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     switch(groupnum){
 
                     case 1:
-                        instr_name = INSTR_NAMES_GROUP1[regfield];
+                        sc.instr_name = INSTR_NAMES_GROUP1[regfield];
                         num_operands = 1;
                         groupnum = 0;
                         break;
                     case 2:
-                        instr_name = INSTR_NAMES_GROUP2[regfield];
-                         if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        sc.instr_name = INSTR_NAMES_GROUP2[regfield];
+                         if(sc.instr_name != NULL && strcmp(sc.instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
+                            print_instruction(&sc);
                         }
                         groupnum = 0;
                         break;
                     case 5:
-                        instr_name = INSTR_NAMES_GROUP5[regfield];
-                        if(instr_name != NULL && strcmp(instr_name, "") == 0){
+                        sc.instr_name = INSTR_NAMES_GROUP5[regfield];
+                        if(sc.instr_name != NULL && strcmp(sc.instr_name, "") == 0){
                             printf("instr not implemented!\n");
                         } else {
-                            print_instruction(operand_format, instr_name, "", "", &prefix_rex);
+                            print_instruction(&sc);
                         }
                         groupnum = 0;
                         break;
                     case 11:
-                        instr_name = INSTR_NAMES_GROUP11[regfield];
+                        sc.instr_name = INSTR_NAMES_GROUP11[regfield];
                         num_operands = 1;
                         groupnum = 0;
                         break;
@@ -899,14 +887,14 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     }
                 */
                 if(flag_sib == 1){
-                    change_state(SIB, &__state_core);
+                    change_state(SIB, &sc);
                 } else if(flag_displacement == 1){
-                    change_state(DISPLACEMENT, &__state_core);
+                    change_state(DISPLACEMENT, &sc);
                 } else if(num_operands > 0){
-                    change_state(OPERAND, &__state_core);
+                    change_state(OPERAND, &sc);
                 } else {
-                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                    change_state(OPCODE, &__state_core);
+                    print_instruction(&sc);
+                    change_state(OPCODE, &sc);
                     opcode_sz = 1;
                 }
                 break;
@@ -915,8 +903,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                 if(nop_len > 0){
                     nop_len--;
                     if(nop_len == 0){
-                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                        change_state(OPCODE, &__state_core);
+                        print_instruction(&sc);
+                        change_state(OPCODE, &sc);
                     }
                 }
                 break;
@@ -949,11 +937,10 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
                         // For immediate operands
                         if(addr_mode_src == ADDR_MODE_I ){
-                            op_src = op_str;
+                            sc.operand_src = op_str;
                         }
-
-                        print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                        change_state(OPCODE, &__state_core);
+                        print_instruction(&sc);
+                        change_state(OPCODE, &sc);
                         op_str[0] = '\0';
                     } else {
                         if(groupnum == 1){
@@ -962,8 +949,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
 
                     }
                 } else {
-                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                    change_state(OPCODE, &__state_core);
+                    print_instruction(&sc);
+                    change_state(OPCODE, &sc);
                     op_bytes_index = 0;
                     opcode_sz = 1;
                     // Reset flags
@@ -975,10 +962,10 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
             case SIB:
                 PRINTD ("CASE --> SIB\n");
                 if(flag_displacement){
-                    change_state(DISPLACEMENT, &__state_core);
+                    change_state(DISPLACEMENT, &sc);
                 } else {
-                    print_instruction(operand_format, instr_name, op_src, op_dst, &prefix_rex);
-                    change_state(OPCODE, &__state_core);
+                    print_instruction(&sc);
+                    change_state(OPCODE, &sc);
                     opcode_sz = 1;
                 }
                 flag_sib = 0;
@@ -990,15 +977,15 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
         __bytenum++;
         flag_skip_opcode = 0;
         // Assign the new state
-        __state_core.__state = __state_core.__state_next;
+        sc.__state = sc.__state_next;
     }
 }
 
-void change_state(int index, struct state_core *__state_core){
-    __state_core->__state_next = index;
+void change_state(int index, struct state_core *sc){
+    sc->__state_next = index;
     printf("\t\t\t\tnext state --> %s\n", STATE_NEXT_STRINGS[index]);
 
     if(index == OPCODE){
-        __state_core->rex.b = 0;
+        sc->rex.b = 0;
     }
 }

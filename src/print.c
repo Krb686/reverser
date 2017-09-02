@@ -13,34 +13,38 @@ void print_bytes(char *byteptr, int n){
     printf("\n");
 }
 
-void print_instruction(const int format, const char *instr_name, const char *op_src, const char *op_dst, uint8_t *prefix_rex){
 
-    printf("FMT = %d\n", format);
-    switch(format){
+void print_instruction(struct state_core *sc){
+//void print_instruction(const int format, const char *instr_name, const char *op_src, const char *op_dst){
+
+
+    char *func_addr = "hi";
+    char *func_name = "hi";
+    printf("FMT = %d\n", sc->operand_fmt);
+    switch(sc->operand_fmt){
     case OP_FMT_RR:
-        printf("\t\t\t%d) %s\t%%%s,%%%s", ++instr_number, instr_name, op_src, op_dst);
+        printf("\t\t\t%d) %s\t%%%s,%%%s", ++instr_number, sc->instr_name, sc->operand_src, sc->operand_dst);
         break;
     case OP_FMT_IR:
-        printf("\t\t\t%d) %s\t$0x%s,%%%s", ++instr_number, instr_name, op_src, op_dst);
+        printf("\t\t\t%d) %s\t$0x%s,%%%s", ++instr_number, sc->instr_name, sc->operand_src, sc->operand_dst);
         break;
     case OP_FMT_Rs:
-        printf("\t\t\t%d) %s\t%%%s", ++instr_number, instr_name, op_src);
+        printf("\t\t\t%d) %s\t%%%s", ++instr_number, sc->instr_name, sc->operand_src);
         break;
     case OP_FMT_Rd:
-        printf("\t\t\t%d) %s\t%%%s", ++instr_number, instr_name, op_dst);
+        printf("\t\t\t%d) %s\t%%%s", ++instr_number, sc->instr_name, sc->operand_dst);
         break;
     case OP_FMT_A:
+        
+        printf("\t\t\t%d) %s\t%x <%s>", ++instr_number, sc->instr_name, func_addr, func_name);
         break;
     case OP_FMT_N:
-        printf("\t\t\t%d) %s\n", ++instr_number, instr_name);
+        printf("\t\t\t%d) %s\n", ++instr_number, sc->instr_name);
         break;
     default:
-        printf("\t\t\t%d) %s\n", ++instr_number, instr_name);
+        printf("\t\t\t%d) %s\n", ++instr_number, sc->instr_name);
         break;
     }
     
-    if(*prefix_rex > 0){
-        *prefix_rex = 0;
-    }
     printf("\n");
 }
