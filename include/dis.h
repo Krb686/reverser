@@ -105,6 +105,7 @@ struct state_core {
     struct rextype rex;
 };
 
+// -------- Function declarations --------
 void decode_instructions(unsigned char*, int, uint8_t);
 void change_state(int, struct state_core*);
 #endif

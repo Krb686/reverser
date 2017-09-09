@@ -938,6 +938,10 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                         // For immediate operands
                         if(addr_mode_src == ADDR_MODE_I ){
                             sc.operand_src = op_str;
+                            if(sc.rex.w){
+                                char *op_src_ext = sign_extend(sc.operand_src, 64);
+                                sc.operand_src = op_src_ext;
+                            }
                         }
                         print_instruction(&sc);
                         change_state(OPCODE, &sc);
