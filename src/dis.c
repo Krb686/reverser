@@ -330,7 +330,7 @@ const int ADDR_MODES_DST[3][256] = {
         9, 9, 9, 9, 9, 9, 9, 9,     ADDR_MODE_REGCODE_4, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, ADDR_MODE_E,     9, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
-        9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9, \
+        9, 9, 9, 9, 9, 9, 9, 9,     ADDR_MODE_J, 9, 9, 9, 9, 9, 9, 9, \
         9, 9, 9, 9, 9, 9, 9, 9,     9, 9, 9, 9, 9, 9, 9, 9
     },
     {
@@ -453,7 +453,7 @@ const char *REX_STRS[16] = { "----", "---B", "--X-", "--XB", "-R--", "-R-B", "-R
 int DISPLACEMENT_BYTES = 0;
 const char *STATE_NEXT_STRINGS[7] = { "", "OPCODE", "", "", "MODRM", "SIB", "OPERAND" };
 
-void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
+void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, uint64_t startaddr){
 
     // Core of the state machine
     struct state_core sc = {
@@ -513,10 +513,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
     int flag_displacement = 0;
     int flag_sib = 0;
     int nop_len = 0;
-    int opcode_reg = 0;
-
-    const char *reg;
-
 
     // Addressing modes selected from ADDR_MODE_SRC and ADDR_MODE_DST
     uint8_t addr_mode_src = 0;
@@ -551,7 +547,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     OPERAND_LENS[0] = 4;
                     break;
                 case 0x31: //xor
-                    opcode_reg = 1;
                     break;
                 case 0x41:
                     default_addr_sz = ADDRESS_SZ_64;
@@ -614,7 +609,6 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                     break;
                 case 0xb8:
                     // 1011wreg : imm
-                    opcode_reg = 1;
                     __SELECT_W_PRESENT = 1;
                     __SELECT_W_VALUE = (*byte >> 3) & 0x1;
                     __SELECT_REG_VALUE = *byte & 0x7;
@@ -943,6 +937,12 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass){
                                 sc.operand_src = op_src_ext;
                             }
                         }
+
+                        if(addr_mode_dst == ADDR_MODE_J){
+                            //TODO - need to convert dst operand here from hex str to signed int, then add to current addr
+                            //printf("ip = %x\n", byte);
+                        }
+
                         print_instruction(&sc);
                         change_state(OPCODE, &sc);
                         op_str[0] = '\0';

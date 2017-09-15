@@ -106,6 +106,6 @@ struct state_core {
 };
 
 // -------- Function declarations --------
-void decode_instructions(unsigned char*, int, uint8_t);
+void decode_instructions(unsigned char*, int, uint8_t, uint64_t);
 void change_state(int, struct state_core*);
 #endif

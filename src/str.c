@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -54,7 +55,7 @@ char *trim_leading(char *str, char trimchar){
 }
 
 
-uint8_t is_hex(char *str){
+uint8_t is_hex(const char *str){
     if(strspn(str, "0123456789abcdefABCDEF") == strlen(str)){
         printf("returning 1...\n");
         return 1;
@@ -68,7 +69,7 @@ uint8_t is_hex(char *str){
 // 1) convert to numeric, extend, convert back to string
 // 2) convert to binary string, string extend, convert back to hex string
 // 3) 
-char* sign_extend(char *str, uint8_t bitlen){
+char* sign_extend(const char *str, uint8_t bitlen){
     uint8_t delta;
 
     // String must contain only hex characters
@@ -92,7 +93,7 @@ char* sign_extend(char *str, uint8_t bitlen){
             printf("conv c = %s\n", c);
             int i;
             char *extend_str = malloc(delta + strlen(str)*4 + 1);
-            char *newstr = malloc(delta + 1);
+
             // Create the sign extended string
             for(i=0;i<delta;i++){
                 strcat(extend_str, c);
@@ -105,6 +106,8 @@ char* sign_extend(char *str, uint8_t bitlen){
             return newhexstr;
         }
     }
+
+    return NULL;
 }
 
 char *bin2hex(char *binstr, uint8_t sign){
@@ -125,7 +128,7 @@ char *bin2hex(char *binstr, uint8_t sign){
             if(sign == UNSIGNED){
                 strcat(binstr_full, "0");
             } else if(sign == SIGNED){
-                strcat(binstr_full, binstr[0]);
+                strcat(binstr_full, binstr);
             }
         }
     }
@@ -145,15 +148,14 @@ char *bin2hex(char *binstr, uint8_t sign){
     return hexstr;
 }
 
-char *hex2bin(char *hexstr){
+char *hex2bin(const char *hexstr){
 
     const char *bindigits[24] = { "0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", \
                                   "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111", \
                                   "1000", "1001", "1010", "1011", "1100", "1101", "1110", "1111"
                                   };
-    char *hexdigits = "0123456789abcdefABCDEF";
     char *binstr = malloc(strlen(hexstr)*4 + 1);
-    char *c = hexstr;
+    const char *c = hexstr;
 
     // Loop over the hex string
     while(*c){

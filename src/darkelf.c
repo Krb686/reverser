@@ -396,7 +396,7 @@ void decode_section(Elf64_Ehdr *ehdr, int s_num){
             printf("\t\tinterpreter = %s\n", s->bytes);
         } else if(strcmp(s->name, ".text") == 0){
             printf("\t\tdecoding instructions\n");
-            decode_instructions(s->bytes, s->size, ehdr->e_ident[4]);
+            decode_instructions(s->bytes, s->size, ehdr->e_ident[4], s->addr);
         }
     }
 }
