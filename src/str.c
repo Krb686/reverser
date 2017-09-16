@@ -148,6 +148,9 @@ char *bin2hex(char *binstr, uint8_t sign){
     return hexstr;
 }
 
+// ================ Function: hex2bin ================ //
+// Convert a hex string to a binary string             //
+// =================================================== //
 char *hex2bin(const char *hexstr){
 
     const char *bindigits[24] = { "0000", "0001", "0010", "0011", "0100", "0101", "0110", "0111", \
@@ -163,4 +166,34 @@ char *hex2bin(const char *hexstr){
         strcat(binstr, bindigits[v]);
     }
     return binstr;
+}
+
+// ================ Function: int2hex ================ //
+// Convert a signed integer to a hex string            //
+// =================================================== //
+char *l2hex(int32_t num){
+    printf("val = %" PRId32 "\n", num);
+    char *c = malloc(9);
+    snprintf(c, 9, "%" PRIx32, num); 
+    return c;
+}
+
+// ================ Function: hex2int ================ //
+// Convert a hex string to a signed 64-bit integer     //
+// =================================================== //
+int32_t hex2l(char *hexstr){
+    int32_t v = NULL;
+    if(hexstr == NULL){
+        return v;
+    }
+
+    if(strlen(hexstr) > 16){
+        return v;
+    }
+
+    if(!is_hex(hexstr)){
+        return v;
+    }
+
+    return (int32_t)strtoul(hexstr, NULL, 16);;
 }

@@ -18,7 +18,7 @@ void print_instruction(struct state_core *sc){
 //void print_instruction(const int format, const char *instr_name, const char *op_src, const char *op_dst){
 
 
-    char *func_addr = "hi";
+    const char *func_addr = sc->operand_dst;
     char *func_name = "hi";
     printf("FMT = %d\n", sc->operand_fmt);
     switch(sc->operand_fmt){
@@ -36,7 +36,7 @@ void print_instruction(struct state_core *sc){
         break;
     case OP_FMT_A:
         
-        printf("\t\t\t%d) %s\t%p <%s>", ++instr_number, sc->instr_name, func_addr, func_name);
+        printf("\t\t\t%d) %s %s <%s>", ++instr_number, sc->instr_name, func_addr, func_name);
         break;
     case OP_FMT_N:
         printf("\t\t\t%d) %s\n", ++instr_number, sc->instr_name);

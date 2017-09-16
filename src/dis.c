@@ -938,9 +938,11 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                             }
                         }
 
+                        // Relative offset to be added to the instruction pointer
                         if(addr_mode_dst == ADDR_MODE_J){
-                            //TODO - need to convert dst operand here from hex str to signed int, then add to current addr
-                            //printf("ip = %x\n", byte);
+                            // Need to add (address of current instruction + len(current instr) + offset)
+                            // By the time this runs, startaddr is instr addr + len(current instr)-1, so just add 1
+                            sc.operand_dst = l2hex(startaddr + hex2l(op_str) + 1);
                         }
 
                         print_instruction(&sc);
@@ -978,6 +980,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
 
 
         byte++;
+        startaddr++;
         __bytenum++;
         flag_skip_opcode = 0;
         // Assign the new state
