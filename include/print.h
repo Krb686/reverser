@@ -1,7 +1,7 @@
 #ifndef PRINT_H
 #define PRINT_H
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
   #define PRINTD printf
@@ -13,5 +13,6 @@
 #include "dis.h"
 void print_bytes(char*, int);
 //void print_instruction(const int, const char*, const char*, const char*);
-void print_instruction(struct state_core*);
+void print_instruction(struct instr*);
+void print_instructions(struct state_core*);
 #endif

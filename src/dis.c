@@ -74,14 +74,6 @@ struct symbol {
     uint8_t type;
 };
 
-struct instr {
-    char *name;
-    char *bytes;
-    struct section *sptr;
-    uint64_t offset;
-};
-
-
 
 const char *INSTR_NAMES[3][256] =
 {
@@ -465,7 +457,9 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
             .r = 0,
             .x = 0,
             .b = 0
-        }
+        },
+        .cur_addr = startaddr,
+        .instr_bytes[0] = '\0'
     };
 
 
@@ -520,7 +514,10 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
 
     // Loop over all bytes
     while(__bytenum < numbytes){
-        printf("\t\t\t\tbyte = %x\n", *byte);
+        char bytestr[3];
+        snprintf(bytestr, 3, "%02x", *byte);
+        PRINTD ("\t\t\t\tbyte = %s\n", bytestr);
+        strcat(sc.instr_bytes, bytestr);
         switch(sc.__state){
             case OPCODE:
                 switch(*byte){
@@ -726,7 +723,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                             sc.operand_fmt = OPERAND_FORMATS[opcode_sz - 1][*byte];
                             
                             if(num_operands == 0 && next_state == OPCODE){
-                                print_instruction(&sc);
+                                add_instruction(&sc);
+                                //print_instruction(&sc);
                             }
                             change_state(next_state, &sc);
                         }
@@ -744,7 +742,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                         if(num_operands > 0){
                             change_state(OPERAND, &sc);
                         } else {
-                            print_instruction(&sc);
+                            add_instruction(&sc);
+                            //print_instruction(&sc);
                             change_state(OPCODE, &sc);
                             opcode_sz = 1;
                         }
@@ -805,7 +804,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
 
                 // displacement detection
                 if( (modefield == 0 && rmfield == 5) || modefield == 1 || modefield == 2){
-                    printf("found displacement\n");
+                    PRINTD ("found displacement\n");
                     flag_displacement = 1;
                     if(modefield == 0 || modefield == 2){
                         DISPLACEMENT_BYTES = 4;
@@ -831,18 +830,20 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                     case 2:
                         sc.instr_name = INSTR_NAMES_GROUP2[regfield];
                          if(sc.instr_name != NULL && strcmp(sc.instr_name, "") == 0){
-                            printf("instr not implemented!\n");
+                             PRINTD ("instr not implemented!\n");
                         } else {
-                            print_instruction(&sc);
+                            add_instruction(&sc);
+                            //print_instruction(&sc);
                         }
                         groupnum = 0;
                         break;
                     case 5:
                         sc.instr_name = INSTR_NAMES_GROUP5[regfield];
                         if(sc.instr_name != NULL && strcmp(sc.instr_name, "") == 0){
-                            printf("instr not implemented!\n");
+                            PRINTD ("instr not implemented!\n");
                         } else {
-                            print_instruction(&sc);
+                            add_instruction(&sc);
+                            //print_instruction(&sc);
                         }
                         groupnum = 0;
                         break;
@@ -887,7 +888,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                 } else if(num_operands > 0){
                     change_state(OPERAND, &sc);
                 } else {
-                    print_instruction(&sc);
+                    add_instruction(&sc);
+                    //print_instruction(&sc);
                     change_state(OPCODE, &sc);
                     opcode_sz = 1;
                 }
@@ -897,22 +899,23 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                 if(nop_len > 0){
                     nop_len--;
                     if(nop_len == 0){
-                        print_instruction(&sc);
+                        add_instruction(&sc);
+                        //print_instruction(&sc);
                         change_state(OPCODE, &sc);
                     }
                 }
                 break;
             case OPERAND:
-                printf("CASE --> OPERAND\n");
+                PRINTD ("CASE --> OPERAND\n");
                 if(num_operands > 0){
 
                     // True when operands still have bytes left to read
                     if(OPERAND_LENS[op_bytes_index] > 0){
                         OPERAND_LENS[op_bytes_index]--;
                         snprintf(byte_str, 3, "%02x", *byte);
-                        printf("byte_str = %s\n", byte_str);
+                        PRINTD ("byte_str = %s\n", byte_str);
                         strcat(op_str, byte_str);
-                        printf("op_str = %s\n", op_str);
+                        PRINTD ("op_str = %s\n", op_str);
                     } 
 
                     // Reduce operand count when operand bytes have been consumed
@@ -927,7 +930,7 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                         opcode_sz = 1;
                         reverse_str(op_str);
                         trim_leading(op_str, '0');
-                        printf("op_str = %s\n", op_str);
+                        PRINTD ("op_str = %s\n", op_str);
 
                         // For immediate operands
                         if(addr_mode_src == ADDR_MODE_I ){
@@ -942,10 +945,11 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                         if(addr_mode_dst == ADDR_MODE_J){
                             // Need to add (address of current instruction + len(current instr) + offset)
                             // By the time this runs, startaddr is instr addr + len(current instr)-1, so just add 1
-                            sc.operand_dst = l2hex(startaddr + hex2l(op_str) + 1);
+                            sc.operand_dst = l2hex(sc.cur_addr + hex2l(op_str) + 1);
                         }
 
-                        print_instruction(&sc);
+                        add_instruction(&sc);
+                        //print_instruction(&sc);
                         change_state(OPCODE, &sc);
                         op_str[0] = '\0';
                     } else {
@@ -955,7 +959,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
 
                     }
                 } else {
-                    print_instruction(&sc);
+                    add_instruction(&sc);
+                    //print_instruction(&sc);
                     change_state(OPCODE, &sc);
                     op_bytes_index = 0;
                     opcode_sz = 1;
@@ -970,7 +975,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                 if(flag_displacement){
                     change_state(DISPLACEMENT, &sc);
                 } else {
-                    print_instruction(&sc);
+                    add_instruction(&sc);
+                    //print_instruction(&sc);
                     change_state(OPCODE, &sc);
                     opcode_sz = 1;
                 }
@@ -980,19 +986,62 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
 
 
         byte++;
-        startaddr++;
+        sc.cur_addr++;
         __bytenum++;
         flag_skip_opcode = 0;
         // Assign the new state
         sc.__state = sc.__state_next;
     }
+
+    printf("printing all instructions\n");
+    print_instructions(&sc);
 }
 
 void change_state(int index, struct state_core *sc){
     sc->__state_next = index;
-    printf("\t\t\t\tnext state --> %s\n", STATE_NEXT_STRINGS[index]);
+
+    PRINTD ("\t\t\t\tnext state --> %s\n", STATE_NEXT_STRINGS[index]);
 
     if(index == OPCODE){
         sc->rex.b = 0;
     }
+}
+
+void add_instruction(struct state_core *sc){
+    PRINTD ("adding new instr\n");
+    struct instr *i = malloc(sizeof(struct instr));
+
+    // name
+    i->name = strdup(sc->instr_name);
+    PRINTD ("i->name = %s\n", i->name);
+
+    // bytes
+    i->bytes = strdup(sc->instr_bytes);
+    PRINTD ("i->bytes = %s\n", i->bytes);
+    sc->instr_bytes[0] = '\0';
+
+    // src
+    i->operand_src = strdup(sc->operand_src);
+    PRINTD ("i->operand_src = %s\n", i->operand_src);
+    // dst
+    i->operand_dst = sc->operand_dst;
+
+    i->operand_fmt = sc->operand_fmt;
+
+    i->offset = sc->cur_addr;
+
+    if(sc->instr_list == NULL){
+        sc->instr_list =  i;
+    } else {
+        struct instr *last = sc->instr_list;
+        while(last){
+            if(last->n){
+                last = last->n;
+            } else{
+                break;
+            }
+        } 
+        last->n = i;
+    }
+    PRINTD ("done adding new instr\n");
 }

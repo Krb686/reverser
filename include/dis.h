@@ -95,6 +95,17 @@ struct rextype {
     uint8_t b;
 };
 
+struct instr {
+    char *name;
+    char *bytes;
+    const char *operand_src;
+    const char *operand_dst;
+    uint8_t operand_fmt;
+    uint64_t offset;
+    struct instr *n;
+    struct instr *p;
+};
+
 struct state_core {
     uint8_t __state;
     uint8_t __state_next;
@@ -102,10 +113,14 @@ struct state_core {
     const char *operand_src;
     const char *operand_dst;
     const char *instr_name;
+    char instr_bytes[16];
+    uint64_t cur_addr;
     struct rextype rex;
+    struct instr *instr_list;
 };
 
 // -------- Function declarations --------
+void add_instruction(struct state_core*);
 void decode_instructions(unsigned char*, int, uint8_t, uint64_t);
 void change_state(int, struct state_core*);
 #endif

@@ -57,10 +57,10 @@ char *trim_leading(char *str, char trimchar){
 
 uint8_t is_hex(const char *str){
     if(strspn(str, "0123456789abcdefABCDEF") == strlen(str)){
-        printf("returning 1...\n");
+        PRINTD ("returning 1...\n");
         return 1;
     } else {
-        printf("returning 0...\n");
+        PRINTD ("returning 0...\n");
         return 0;
     }
 }
@@ -79,18 +79,18 @@ char* sign_extend(const char *str, uint8_t bitlen){
             delta = bitlen - strlen(str)*4;
             char *binstr = malloc(strlen(str) + 1);
             binstr = hex2bin(str);
-            printf("binstr = %s\n", binstr);
-            printf("need to extend by %d bits\n", delta);
+            PRINTD ("binstr = %s\n", binstr);
+            PRINTD ("need to extend by %d bits\n", delta);
 
             // Find the uppermost bit
             // This converts the character to a number
             long topbit = strtol((char[]){str[0], 0}, NULL, 16) >> 3;
-            printf("topbit = %ld\n", topbit);
+            PRINTD ("topbit = %ld\n", topbit);
           
             // Convert the number back to a character
             char c[2]; 
             snprintf(c, 2, "%d", (int)topbit); 
-            printf("conv c = %s\n", c);
+            PRINTD ("conv c = %s\n", c);
             int i;
             char *extend_str = malloc(delta + strlen(str)*4 + 1);
 
@@ -99,10 +99,10 @@ char* sign_extend(const char *str, uint8_t bitlen){
                 strcat(extend_str, c);
             }
             strcat(extend_str, binstr);
-            printf("extend_str = %s\n", extend_str);
+            PRINTD ("extend_str = %s\n", extend_str);
 
             char *newhexstr = bin2hex(extend_str, (uint8_t)SIGNED);
-            printf("newhexstr = %s\n", newhexstr);
+            PRINTD ("newhexstr = %s\n", newhexstr);
             return newhexstr;
         }
     }
@@ -112,14 +112,14 @@ char* sign_extend(const char *str, uint8_t bitlen){
 
 char *bin2hex(char *binstr, uint8_t sign){
     uint8_t binlen = strlen(binstr);
-    printf("binlen = %d\n", binlen);
+    PRINTD ("binlen = %d\n", binlen);
     uint8_t padlen = 4 - (binlen % 4);
     if(padlen == 4){
         padlen = 0;
     }
-    printf("padlen = %d\n", padlen);
+    PRINTD ("padlen = %d\n", padlen);
     uint8_t hexlen = binlen + padlen;
-    printf("hexlen = %d\n", hexlen);
+    PRINTD ("hexlen = %d\n", hexlen);
 
     uint8_t i;
     char *binstr_full = malloc(hexlen);
@@ -133,7 +133,7 @@ char *bin2hex(char *binstr, uint8_t sign){
         }
     }
     strcat(binstr_full, binstr);
-    printf("binstr_full = %s\n", binstr_full);
+    PRINTD ("binstr_full = %s\n", binstr_full);
 
 
     char *c = binstr_full;
@@ -172,7 +172,7 @@ char *hex2bin(const char *hexstr){
 // Convert a signed integer to a hex string            //
 // =================================================== //
 char *l2hex(int32_t num){
-    printf("val = %" PRId32 "\n", num);
+    PRINTD ("val = %" PRId32 "\n", num);
     char *c = malloc(9);
     snprintf(c, 9, "%" PRIx32, num); 
     return c;

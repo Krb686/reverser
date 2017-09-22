@@ -1,6 +1,7 @@
 #ifndef STR_H
 #define STR_H
 #include <inttypes.h>
+#include "print.h"
 
 #define UNSIGNED 0
 #define SIGNED   1
