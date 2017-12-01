@@ -42,6 +42,10 @@ struct section {
 struct section** __sections;
 struct symbol**  __symbols;
 
+char *addr2funclabel(char *addr){
+    //
+}
+
 void decode_elf(char *start_addr){
 
     char *incptr;
@@ -342,7 +346,22 @@ void decode_section(Elf64_Ehdr *ehdr, int s_num){
             printf("\t\t\tst_size = %016" PRIx64 "\n", sym->st_size);
             sym++;
         }
-        // String tables
+    // Dynamic linking table
+    } else if(strcmp(s->type_str, "SHT_DYNAMIC") == 0){
+        int dt_entry_sz = sizeof(Elf64_Dyn);    
+        int num = s->size / dt_entry_sz;
+
+        Elf64_Dyn *dyn =(Elf64_Dyn * )s->bytes;
+
+        int i;
+        for(i=0;i<num;i++){
+            printf("\t\t---- dyn entry ----\n");
+            printf("\t\td_tag = %" PRIu64 "\n", dyn->d_tag);
+            printf("\t\td_val = %" PRIu64 "\n", dyn->d_un.d_val);
+            printf("\t\td_ptr = %" PRIx64 "\n", dyn->d_un.d_ptr);
+            dyn++;
+        }
+    // String tables
     } else if(strcmp(s->type_str, "SHT_STRTAB") == 0){
         printf("\t\tstrings:\n");
 
@@ -392,11 +411,20 @@ void decode_section(Elf64_Ehdr *ehdr, int s_num){
             }
         }
     } else {
+       // Filter on section name
         if(strcmp(s->name, ".interp") == 0){
             printf("\t\tinterpreter = %s\n", s->bytes);
         } else if(strcmp(s->name, ".text") == 0){
             printf("\t\tdecoding instructions\n");
             decode_instructions(s->bytes, s->size, ehdr->e_ident[4], s->addr);
+            //resolve_function_labels();
         }
     }
+}
+
+void resolve_functionlabels(){
+    //dynsym contains func labels
+    //dynstr contains func labels
+    //symtab
+    //strtab
 }

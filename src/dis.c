@@ -926,6 +926,8 @@ void decode_instructions(unsigned char *byte, int numbytes, uint8_t elfclass, ui
                     
                     // When all operands have been read
                     if(num_operands == 0){
+
+                        // reset state variables back to defaults
                         op_bytes_index = 0;
                         opcode_sz = 1;
                         reverse_str(op_str);
